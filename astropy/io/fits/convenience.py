@@ -251,6 +251,9 @@ def getdata(filename, *args, header=None, lower=None, upper=None, view=None, **k
         if data.dtype.descr[0][0] == "":
             # this data does not have fields
             return
+        if isinstance(data, fitsrec.FITS_rec):
+            for col in data.columns.columns:
+                col.name = trans(col.name)
         data.dtype.names = [trans(n) for n in data.dtype.names]
 
     # allow different views into the underlying ndarray.  Keep the original

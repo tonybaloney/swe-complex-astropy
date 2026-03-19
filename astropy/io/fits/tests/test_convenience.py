@@ -44,6 +44,25 @@ class TestConvenience(FitsTestCase):
 
         f.close()  # Close it now
 
+    def test_getdata_lower_upper_table_columns(self):
+        lower_table = Table([np.zeros(3), np.ones(3)], names=["a", "b"])
+        upper_table = Table([np.zeros(3), np.ones(3)], names=["A", "B"])
+
+        lower_path = self.temp("getdata_lower.fits")
+        upper_path = self.temp("getdata_upper.fits")
+        lower_table.write(lower_path)
+        upper_table.write(upper_path)
+
+        lower_data = fits.getdata(lower_path, 1, upper=True)
+        upper_data = fits.getdata(upper_path, 1, lower=True)
+
+        assert lower_data.dtype.names == ("A", "B")
+        assert upper_data.dtype.names == ("a", "b")
+        assert_array_equal(lower_data["A"], lower_data["a"])
+        assert_array_equal(upper_data["A"], upper_data["a"])
+        assert_array_equal(np.array(lower_data)["A"], lower_data["A"])
+        assert_array_equal(np.array(upper_data)["a"], upper_data["a"])
+
     def test_table_to_hdu(self):
         table = Table(
             [[1, 2, 3], ["a", "b", "c"], [2.3, 4.5, 6.7]],
