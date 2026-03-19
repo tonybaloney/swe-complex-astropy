@@ -446,8 +446,19 @@ class TestDataFrameConversion:
         t["a"] = np.arange(np.prod(colshape)).reshape(colshape)
 
         match backend:
-            # Pandas and PyArrow do not support multidimensional columns
-            case "pandas" | "pyarrow":
+            # narwhals-based pandas and PyArrow do not support multidimensional columns
+            case "pandas" if not use_legacy_pandas_api:
+                if ndim > 1:
+                    with pytest.raises(
+                        ValueError,
+                        match="Cannot convert a table with multidimensional columns",
+                    ):
+                        self._to_dataframe(t, backend, use_legacy_pandas_api)
+                    return
+            case "pandas":
+                # Legacy to_pandas converts multidim columns to object dtype
+                pass
+            case "pyarrow":
                 if ndim > 1:
                     with pytest.raises(
                         ValueError,
@@ -678,3 +689,13 @@ def test_from_pandas_df_with_qtable(method):
     df = t.to_pandas()
     qt = getattr(table.QTable, method)(df)
     assert isinstance(qt, table.QTable)
+
+
+@pytest.mark.skipif(not HAS_PANDAS, reason="requires pandas")
+def test_to_pandas_multidim_columns():
+    """Test that to_pandas converts multidimensional columns to object dtype (#19173)."""
+    t = table.Table({"a": ["foo", "bar"], "b": [[1, 2], [3, 4]]})
+    df = t.to_pandas()
+    assert df["b"].dtype == object
+    assert_array_equal(df["b"].iloc[0], [1, 2])
+    assert_array_equal(df["b"].iloc[1], [3, 4])
