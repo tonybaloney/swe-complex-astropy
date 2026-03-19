@@ -76,6 +76,14 @@ class Conf(_config.ConfigNamespace):
         "This configuration option will be deprecated and then removed in "
         "subsequent major releases.",
     )
+    max_vector_display = _config.ConfigItem(
+        0,
+        "Maximum number of multidimensional column elements to display "
+        "in full when printing a table. If the total number of elements "
+        "in extra dimensions is at or below this value, all elements are "
+        "shown. If 0, only the first and last elements are shown "
+        "(the default behavior).",
+    )
 
 
 conf = Conf()

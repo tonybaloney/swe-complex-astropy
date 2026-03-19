@@ -528,9 +528,21 @@ class TableFormatter:
                     # Any zero dimension means there is no data to print
                     return ""
                 else:
-                    left = format_func(col_format, col[(idx,) + multidim0])
-                    right = format_func(col_format, col[(idx,) + multidim1])
-                    return f"{left} .. {right}"
+                    from astropy.table import conf as table_conf
+
+                    n_elements = np.prod(multidims)
+                    max_vector_display = table_conf.max_vector_display
+                    if max_vector_display > 0 and n_elements <= max_vector_display:
+                        # Show all elements when total count is within threshold
+                        elements = [
+                            format_func(col_format, col[(idx,) + midx])
+                            for midx in np.ndindex(multidims)
+                        ]
+                        return " ".join(elements)
+                    else:
+                        left = format_func(col_format, col[(idx,) + multidim0])
+                        right = format_func(col_format, col[(idx,) + multidim1])
+                        return f"{left} .. {right}"
             elif is_scalar:
                 return format_func(col_format, col)
             else:

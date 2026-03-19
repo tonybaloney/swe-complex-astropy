@@ -1131,7 +1131,65 @@ def test_multidims_with_zero_dim():
     assert t.pformat(show_dtype=True) == exp
 
 
-def test_zero_length_string():
+def test_max_vector_display():
+    """Test max_vector_display config for controlling multidim column display."""
+    arr = np.array([[1, 2, 3], [10, 20, 30]], dtype=np.int64)
+    t = Table([arr], names=["a"])
+
+    # Default behavior (max_vector_display=0): show first .. last
+    lines = t.pformat()
+    assert lines == [
+        "   a    ",
+        "--------",
+        "  1 .. 3",
+        "10 .. 30",
+    ]
+
+    # With max_vector_display=3: show all 3 elements
+    with table.conf.set_temp("max_vector_display", 3):
+        lines = t.pformat()
+        assert lines == [
+            "   a    ",
+            "--------",
+            "   1 2 3",
+            "10 20 30",
+        ]
+
+    # With max_vector_display=2: threshold too low, still use first .. last
+    with table.conf.set_temp("max_vector_display", 2):
+        lines = t.pformat()
+        assert lines == [
+            "   a    ",
+            "--------",
+            "  1 .. 3",
+            "10 .. 30",
+        ]
+
+
+def test_max_vector_display_2d():
+    """Test max_vector_display with higher-dimensional columns."""
+    arr = np.arange(12, dtype=np.int64).reshape(2, 2, 3)
+    t = Table([arr], names=["a"])
+
+    # 2x3 = 6 elements per row
+    with table.conf.set_temp("max_vector_display", 6):
+        lines = t.pformat()
+        assert lines == [
+            "      a      ",
+            "-------------",
+            "  0 1 2 3 4 5",
+            "6 7 8 9 10 11",
+        ]
+
+    # Below threshold, use default first .. last
+    with table.conf.set_temp("max_vector_display", 5):
+        lines = t.pformat()
+        assert lines == [
+            "   a   ",
+            "-------",
+            " 0 .. 5",
+            "6 .. 11",
+        ]
     data = np.array([("", 12)], dtype=[("a", "S"), ("b", "i4")])
     t = Table(data, copy=False)
     exp = [
