@@ -418,4 +418,18 @@ def get_header_from_yaml(lines):
     except Exception as err:
         raise YamlParseError() from err
 
+    # If the YAML ``meta`` field was a sequence (list of single-key dicts)
+    # instead of an ``!!omap``, convert it to a regular dict so that
+    # downstream code can treat it uniformly as a mapping.
+    if "meta" in header and isinstance(header["meta"], list):
+        meta = {}
+        for item in header["meta"]:
+            if isinstance(item, dict):
+                meta.update(item)
+            else:
+                raise YamlParseError(
+                    f"unexpected entry in meta: expected dict, got {type(item).__name__}"
+                )
+        header["meta"] = meta
+
     return header

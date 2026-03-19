@@ -300,6 +300,32 @@ def test_bad_delimiter_input(format_engine):
     assert "only space and comma are allowed" in str(err.value)
 
 
+def test_meta_no_omap(format_engine):
+    """Read ECSV file where meta is a YAML sequence without !!omap tag.
+
+    Regression test for https://github.com/astropy/astropy/issues/19313.
+    """
+    # Without !!omap, YAML parses the meta as a list of dicts instead of
+    # an ordered mapping. The reader should handle this gracefully.
+    txt = """\
+# %ECSV 1.0
+# ---
+# meta:
+# - keyword:
+#    this_is: a_test
+# datatype:
+# - name: fake
+#   datatype: string
+fake
+0
+"""
+    kwargs = {"guess": False} if format_engine["format"] == "ascii.ecsv" else {}
+    t = Table.read(txt, **format_engine, **kwargs)
+    assert t.meta == {"keyword": {"this_is": "a_test"}}
+    assert len(t) == 1
+    assert t["fake"][0] == "0"
+
+
 def test_multidim_only_masked(format_engine):
     """Multi-dimensional column with one masked entry
 
