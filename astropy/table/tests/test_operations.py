@@ -2600,3 +2600,23 @@ def test_empty_skycoord_vstack():
     table2 = table.vstack([table1, table1])  # Used to fail.
     assert len(table2) == 0
     assert isinstance(table2["foo"], SkyCoord)
+
+
+def test_vstack_dtype_not_stringified():
+    """Regression test for gh-19199.
+
+    Ensure that vstack preserves actual dtype objects rather than converting
+    them to string representations. This is critical for custom user dtypes
+    that cannot be reconstructed from their string form.
+    """
+    # Verify that vstack preserves the exact dtype for standard dtypes.
+    t = Table({"a": np.array([1, 2], dtype=np.float32)})
+    result = table.vstack([t, t])
+    assert result["a"].dtype == np.float32
+    assert len(result) == 4
+    np.testing.assert_array_equal(result["a"], [1, 2, 1, 2])
+
+    # Same for integer dtypes.
+    t = Table({"a": np.array([1, 2], dtype=np.int16)})
+    result = table.vstack([t, t])
+    assert result["a"].dtype == np.int16

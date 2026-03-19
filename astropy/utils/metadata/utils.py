@@ -28,8 +28,8 @@ def common_dtype(arrs):
 
     Returns
     -------
-    dtype_str : str
-        String representation of dytpe (dtype ``str`` attribute)
+    dtype : `numpy.dtype`
+        Common dtype of the input arrays.
     """
     np_types = (np.bool_, np.object_, np.number, np.character, np.void)
     uniq_types = {
@@ -55,8 +55,4 @@ def common_dtype(arrs):
             ]
 
     arr_common = np.array([arr[0] for arr in arrs])
-    return (
-        arr_common.dtype.str
-        if arr_common.dtype.names is None
-        else arr_common.dtype.descr
-    )
+    return arr_common.dtype

@@ -249,9 +249,9 @@ def test_common_dtype_string():
     u4 = np.array(["1234"])
     b3 = np.array([b"123"])
     b5 = np.array([b"12345"])
-    assert common_dtype([u3, u4]).endswith("U4")
-    assert common_dtype([b5, u4]).endswith("U5")
-    assert common_dtype([b3, b5]).endswith("S5")
+    assert common_dtype([u3, u4]) == np.dtype("U4")
+    assert common_dtype([b5, u4]) == np.dtype("U5")
+    assert common_dtype([b3, b5]) == np.dtype("S5")
 
 
 def test_common_dtype_basic():
@@ -262,8 +262,12 @@ def test_common_dtype_basic():
     with pytest.raises(MergeConflictError):
         common_dtype([i8, u3])
 
-    assert common_dtype([i8, i8]).endswith("i8")
-    assert common_dtype([i8, f8]).endswith("f8")
+    assert common_dtype([i8, i8]) == np.dtype("i8")
+    assert common_dtype([i8, f8]) == np.dtype("f8")
+
+    # Ensure all results are numpy dtype instances, not strings.
+    assert isinstance(common_dtype([i8, i8]), np.dtype)
+    assert isinstance(common_dtype([i8, f8]), np.dtype)
 
 
 def test_common_dtype_exhaustive():
