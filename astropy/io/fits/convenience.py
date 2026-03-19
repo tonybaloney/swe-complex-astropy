@@ -252,6 +252,8 @@ def getdata(filename, *args, header=None, lower=None, upper=None, view=None, **k
             # this data does not have fields
             return
         data.dtype.names = [trans(n) for n in data.dtype.names]
+        for col in getattr(data, "_coldefs", []):
+            col.name = trans(col.name)
 
     # allow different views into the underlying ndarray.  Keep the original
     # view just in case there is a problem

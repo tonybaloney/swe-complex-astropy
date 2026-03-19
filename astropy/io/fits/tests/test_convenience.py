@@ -513,3 +513,17 @@ class TestConvenience(FitsTestCase):
             IndexError, match="No data in Primary HDU and no extension HDU found."
         ):
             fits.getdata(buf)
+
+    @pytest.mark.parametrize("kwargs, expected", [
+        ({"upper": True}, ("A", "B")),
+        ({"lower": True}, ("a", "b")),
+    ])
+    def test_getdata_column_case(self, kwargs, expected):
+        """Test that upper/lower keywords affect column name case."""
+        filename = self.temp("test_case.fits")
+        Table([np.zeros(5), np.ones(5)], names=["a", "b"]).write(filename)
+
+        data = fits.getdata(filename, **kwargs)
+        assert data.dtype.names == expected
+        assert_array_equal(data[expected[0]], np.zeros(5))
+        assert_array_equal(data["a"], np.zeros(5))  # case-insensitive still works
