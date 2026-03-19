@@ -19,6 +19,7 @@ __all__ = [
     "NUMPY_LT_2_4",
     "NUMPY_LT_2_4_1",
     "NUMPY_LT_2_5",
+    "set_shape",
 ]
 
 # TODO: It might also be nice to have aliases to these named for specific
@@ -36,3 +37,11 @@ NUMPY_LT_2_5 = not minversion(np, "2.5.0.dev0")
 
 
 COPY_IF_NEEDED = False if NUMPY_LT_2_0 else None
+
+
+def set_shape(arr, shape):
+    """Set the shape of an array, avoiding the deprecated shape setter in NumPy >= 2.5."""
+    if NUMPY_LT_2_5:
+        arr.shape = shape
+    else:
+        arr._set_shape(shape)
