@@ -1027,7 +1027,17 @@ class TestTableFunctions(FitsTestCase):
             header = hdul[1].header
             assert header["TNULL1"] == 2
             assert header["TNULL2"] == "b"
-            assert header["TNULL3"] == 2.3
+            assert "TNULL3" not in header
+
+    def test_ascii_table_floating_tnull_ignored(self):
+        col = fits.Column(name="a", format="F6.2", array=[1.23, 4.56], null="NaN")
+
+        hdu = fits.TableHDU.from_columns([col])
+        hdu.writeto(self.temp("test_ascii_tnull.fits"), overwrite=True)
+
+        with fits.open(self.temp("test_ascii_tnull.fits")) as hdul:
+            assert "TNULL1" not in hdul[1].header
+            assert hdul[1].columns[0].null is None
 
     def test_multidimension_table_from_numpy_rec_columns(self):
         """Regression test for https://github.com/astropy/astropy/issues/5280

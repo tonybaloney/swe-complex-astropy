@@ -1063,7 +1063,14 @@ class Column(NotifierMixin):
         # inputs for these options that we need to treat '' as None
         if null is not None and null != "":
             msg = None
-            if isinstance(format, _AsciiColumnFormat):
+            if isinstance(format, _AsciiColumnFormat) and format.format != "A":
+                msg = (
+                    "Column null option (TNULLn) is invalid for ASCII table "
+                    f"columns of type {format!r} (got {null!r}).  The invalid "
+                    "value will be ignored for the purpose of formatting "
+                    "the data in this column."
+                )
+            elif isinstance(format, _AsciiColumnFormat):
                 null = str(null)
                 if len(null) > format.width:
                     msg = (
