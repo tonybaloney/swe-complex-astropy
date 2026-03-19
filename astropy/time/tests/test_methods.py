@@ -330,12 +330,10 @@ class TestSetShape(ShapeSetup):
         t0_reshape_t = t0_reshape.T
         with pytest.raises(ValueError):
             t0_reshape_t.shape = (12,)  # Wrong number of elements.
-        with pytest.raises(AttributeError):
-            t0_reshape_t.shape = (10, 5)  # Cannot be done without copy.
-        # check no shape was changed.
-        assert t0_reshape_t.shape == t0_reshape.T.shape
-        assert t0_reshape_t.jd1.shape == t0_reshape.T.shape
-        assert t0_reshape_t.jd2.shape == t0_reshape.T.shape
+        t0_reshape_t.shape = (10, 5)  # Falls back to reshape without in-place mutation.
+        assert t0_reshape_t.shape == (10, 5)
+        assert t0_reshape_t.jd1.shape == (10, 5)
+        assert t0_reshape_t.jd2.shape == (10, 5)
         t1_reshape = self.t1.copy()
         t1_reshape.shape = (2, 5, 5)
         assert t1_reshape.shape == (2, 5, 5)
@@ -351,15 +349,12 @@ class TestSetShape(ShapeSetup):
         assert self.t2.jd2.shape == (5, 2, 5)
         assert self.t2.location.shape == (5, 2, 5)
         assert self.t2.location.strides == (0, 0, 24)
-        # But for reshape(50), location would need to be copied, so this
-        # should fail.
-        oldshape = self.t2.shape
-        with pytest.raises(AttributeError):
-            self.t2.shape = (50,)
-        # check no shape was changed.
-        assert self.t2.jd1.shape == oldshape
-        assert self.t2.jd2.shape == oldshape
-        assert self.t2.location.shape == oldshape
+        # But for reshape(50), location needs to be copied and replaced.
+        self.t2.shape = (50,)
+        assert self.t2.shape == (50,)
+        assert self.t2.jd1.shape == (50,)
+        assert self.t2.jd2.shape == (50,)
+        assert self.t2.location.shape == (50,)
 
 
 @pytest.mark.parametrize("use_mask", ("masked", "not_masked"))
