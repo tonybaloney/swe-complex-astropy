@@ -215,6 +215,10 @@ class _ImageBaseHDU(_ValidHDU):
         # Determine from the values read from the header
         return tuple(reversed(self._axes))
 
+    @shape.setter
+    def shape(self, value):
+        self.data = self.data.reshape(value)
+
     @property
     def header(self):
         return self._header
