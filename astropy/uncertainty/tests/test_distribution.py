@@ -266,6 +266,16 @@ def test_helper_uniform_samples():
     assert np.all(np.min(udist.distribution, axis=-1) > [1, 2] * u.kpc)
     assert np.all(np.max(udist.distribution, axis=-1) < [3, 4] * u.kpc)
 
+    udist = ds.uniform(
+        lower=[[1, 2], [3, 4]] * u.kpc,
+        upper=[[2, 3], [4, 5]] * u.kpc,
+        n_samples=1000,
+    )
+    assert udist.shape == (2, 2)
+    assert udist.distribution.shape == (2, 2, 1000)
+    assert np.all(np.min(udist.distribution, axis=-1) > [[1, 2], [3, 4]] * u.kpc)
+    assert np.all(np.max(udist.distribution, axis=-1) < [[2, 3], [4, 5]] * u.kpc)
+
     # try the alternative creator
     udist = ds.uniform(center=[1, 3, 2] * u.pc, width=[5, 4, 3] * u.pc, n_samples=1000)
     assert udist.shape == (3,)
