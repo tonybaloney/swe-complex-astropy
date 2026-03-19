@@ -300,6 +300,26 @@ def test_bad_delimiter_input(format_engine):
     assert "only space and comma are allowed" in str(err.value)
 
 
+def test_read_meta_without_omap(format_engine):
+    text = """
+# %ECSV 1.0
+# ---
+# meta:
+#   keyword:
+#     this_is: a_test
+# datatype:
+# - name: fake
+#   datatype: string
+fake
+0
+"""
+    kwargs = {"guess": False} if format_engine["format"] == "ascii.ecsv" else {}
+    table = Table.read(text, **format_engine, **kwargs)
+
+    assert table.meta == {"keyword": {"this_is": "a_test"}}
+    assert table["fake"].tolist() == ["0"]
+
+
 def test_multidim_only_masked(format_engine):
     """Multi-dimensional column with one masked entry
 

@@ -63,7 +63,7 @@ def _construct_odict(load, node):
     except the data type is changed to OrderedDict() and setitem is
     used instead of append in the loop
     """
-    omap = {}
+    omap = OrderedDict()
     yield omap
     if not isinstance(node, yaml.SequenceNode):
         raise yaml.constructor.ConstructorError(
@@ -94,6 +94,19 @@ def _construct_odict(load, node):
         key = load.construct_object(key_node)
         value = load.construct_object(value_node)
         omap[key] = value
+
+
+def _construct_maybe_odict(load, node):
+    if isinstance(node, yaml.SequenceNode):
+        return _construct_odict(load, node)
+    if isinstance(node, yaml.MappingNode):
+        return OrderedDict(load.construct_pairs(node))
+    raise yaml.constructor.ConstructorError(
+        "while constructing an ordered map",
+        node.start_mark,
+        f"expected a mapping or sequence, but found {node.id}",
+        node.start_mark,
+    )
 
 
 def _repr_pairs(dump, tag, sequence, flow_style=None):
@@ -410,7 +423,7 @@ def get_header_from_yaml(lines):
         custom odict constructor.
         """
 
-    TableLoader.add_constructor("tag:yaml.org,2002:omap", _construct_odict)
+    TableLoader.add_constructor("tag:yaml.org,2002:omap", _construct_maybe_odict)
     # Now actually load the YAML data structure into `meta`
     header_yaml = textwrap.dedent("\n".join(lines))
     try:
