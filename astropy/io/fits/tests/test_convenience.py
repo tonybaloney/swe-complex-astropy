@@ -513,3 +513,33 @@ class TestConvenience(FitsTestCase):
             IndexError, match="No data in Primary HDU and no extension HDU found."
         ):
             fits.getdata(buf)
+
+    def test_getdata_upper_lower(self, tmp_path):
+        """Regression test: lower/upper kwargs must sync column names."""
+        cols = [
+            fits.Column(name="a", format="D", array=np.zeros(5)),
+            fits.Column(name="b", format="D", array=np.ones(5)),
+        ]
+        hdu = fits.BinTableHDU.from_columns(cols)
+        filename = str(tmp_path / "test.fits")
+        hdu.writeto(filename)
+
+        # upper=True should let bracket access work with upper-case names
+        data = fits.getdata(filename, upper=True)
+        assert data.dtype.names == ("A", "B")
+        assert_array_equal(data["A"], np.zeros(5))
+        assert_array_equal(data["B"], np.ones(5))
+
+        # lower=True on upper-case source columns
+        cols2 = [
+            fits.Column(name="A", format="D", array=np.zeros(5)),
+            fits.Column(name="B", format="D", array=np.ones(5)),
+        ]
+        hdu2 = fits.BinTableHDU.from_columns(cols2)
+        filename2 = str(tmp_path / "test2.fits")
+        hdu2.writeto(filename2)
+
+        data2 = fits.getdata(filename2, lower=True)
+        assert data2.dtype.names == ("a", "b")
+        assert_array_equal(data2["a"], np.zeros(5))
+        assert_array_equal(data2["b"], np.ones(5))
