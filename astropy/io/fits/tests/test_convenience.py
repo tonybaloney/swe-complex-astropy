@@ -44,6 +44,19 @@ class TestConvenience(FitsTestCase):
 
         f.close()  # Close it now
 
+    def test_getdata_lower_upper(self):
+        hdu = fits.BinTableHDU.from_columns(
+            [fits.Column(name="AbC", format="J", array=np.array([1, 2]))]
+        )
+        filename = self.temp("test_getdata_lower_upper.fits")
+        hdu.writeto(filename)
+
+        assert fits.getdata(filename, lower=True).dtype.names == ("abc",)
+        assert fits.getdata(filename, upper=True).dtype.names == ("ABC",)
+        assert fits.getdata(filename, lower=True, header=True)[0].dtype.names == (
+            "abc",
+        )
+
     def test_table_to_hdu(self):
         table = Table(
             [[1, 2, 3], ["a", "b", "c"], [2.3, 4.5, 6.7]],

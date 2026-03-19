@@ -244,13 +244,7 @@ def getdata(filename, *args, header=None, lower=None, upper=None, view=None, **k
         trans = operator.methodcaller("lower")
     elif upper:
         trans = operator.methodcaller("upper")
-    if trans:
-        if data.dtype.names is None:
-            # this data does not have fields
-            return
-        if data.dtype.descr[0][0] == "":
-            # this data does not have fields
-            return
+    if trans and data.dtype.names is not None and data.dtype.descr[0][0] != "":
         data.dtype.names = [trans(n) for n in data.dtype.names]
 
     # allow different views into the underlying ndarray.  Keep the original
