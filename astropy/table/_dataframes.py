@@ -115,14 +115,15 @@ def _validate_columns_for_backend(
     if not badcols:
         return
 
-    # Check if pandas-like or pyarrow-like
-    if _is_pandas_like(backend_impl) or (
-        not isinstance(backend_impl, str)
-        and getattr(backend_impl, "is_pyarrow", lambda: False)()
-    ):
+    # PyArrow does not support multidimensional columns.
+    # Pandas handles them by storing each row as an array in an object column
+    # (see to_pandas below), so we only reject pyarrow here.
+    if not isinstance(backend_impl, str) and getattr(
+        backend_impl, "is_pyarrow", lambda: False
+    )():
         raise ValueError(
             f"Cannot convert a table with multidimensional columns to a "
-            f"pandas-like or pyarrow DataFrame. Offending columns are: {badcols}\n"
+            f"pyarrow DataFrame. Offending columns are: {badcols}\n"
             f"One can filter out such columns using:\n"
             f"names = [name for name in tbl.colnames if len(tbl[name].shape) <= 1]\n"
             f"tbl[names].to_pandas(...)"
@@ -389,6 +390,12 @@ def to_pandas(
     out = {}
 
     for name, column in tbl.columns.items():
+        # Multidimensional columns are stored as object columns containing
+        # one array per row, mirroring pandas' handling of ragged arrays.
+        if len(column.shape) > 1:
+            out[name] = Series(list(column), dtype=object)
+            continue
+
         if getattr(column.dtype, "isnative", True):
             out[name] = column
         else:

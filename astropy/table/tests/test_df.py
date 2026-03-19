@@ -446,14 +446,21 @@ class TestDataFrameConversion:
         t["a"] = np.arange(np.prod(colshape)).reshape(colshape)
 
         match backend:
-            # Pandas and PyArrow do not support multidimensional columns
-            case "pandas" | "pyarrow":
+            # PyArrow does not support multidimensional columns
+            case "pyarrow":
                 if ndim > 1:
                     with pytest.raises(
                         ValueError,
                         match="Cannot convert a table with multidimensional columns",
                     ):
                         self._to_dataframe(t, backend, use_legacy_pandas_api)
+                    return
+            case "pandas":
+                df = self._to_dataframe(t, backend, use_legacy_pandas_api)
+                if ndim > 1:
+                    # Multidimensional columns become object columns of arrays
+                    assert df["a"].dtype == object
+                    assert_array_equal(list(df["a"]), list(t["a"]))
                     return
             case "dask" | "duckdb":
                 # Lazy backends will raise ValueError in _to_dataframe
