@@ -564,7 +564,9 @@ class TestMaskedArrayShaping(MaskedArraySetup):
 
     def test_shape_setting(self):
         ma_reshape = self.ma.copy()
-        ma_reshape.shape = (6,)
+        with pytest.warns() as warnings:
+            ma_reshape.shape = (6,)
+        assert len(warnings) == 0
         expected_data = self.a.reshape((6,))
         expected_mask = self.mask_a.reshape((6,))
         assert ma_reshape.shape == expected_data.shape
