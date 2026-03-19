@@ -869,10 +869,7 @@ def _rstrip_inplace(array):
     # Attempt to have the strings as a 1-D array to give the chunk known size.
     # Note: the code will work if this fails; the chunks will just be larger.
     if b.ndim > 2:
-        try:
-            b.shape = -1, b.shape[-1]
-        except AttributeError:  # can occur for non-contiguous arrays
-            pass
+        b = b.reshape(-1, b.shape[-1])
     for j in range(0, b.shape[0], bufsize):
         c = b[j : j + bufsize]
         # Mask which will tell whether we're in a sequence of trailing spaces.
