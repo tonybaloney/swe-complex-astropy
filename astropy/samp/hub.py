@@ -13,6 +13,8 @@ import warnings
 import xmlrpc.client as xmlrpc
 from urllib.parse import urlunparse
 
+from defusedxml import xmlrpc as defused_xmlrpc
+
 from astropy import log
 
 from .constants import SAMP_STATUS_OK, __profile_version__
@@ -744,7 +746,7 @@ class SAMPHubServer:
             server_proxy_pool = None
 
             server_proxy_pool = ServerProxyPool(
-                self._pool_size, xmlrpc.ServerProxy, xmlrpc_addr, allow_none=1
+                self._pool_size, defused_xmlrpc.ServerProxy, xmlrpc_addr, allow_none=1
             )
 
             public_id = self._private_keys[private_key][0]

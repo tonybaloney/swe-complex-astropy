@@ -1,3 +1,4 @@
+import astropy.samp.hub_proxy as hub_proxy
 from astropy.samp import conf
 from astropy.samp.hub import SAMPHubServer
 from astropy.samp.hub_proxy import SAMPHubProxy
@@ -29,6 +30,11 @@ class TestHubProxy:
 
     def test_ping(self):
         self.proxy.ping()
+
+    def test_safe_server_proxy(self):
+        proxy = self.proxy.proxy._proxies.get_nowait()
+        self.proxy.proxy._proxies.put(proxy)
+        assert proxy.__class__ is hub_proxy.defused_xmlrpc.ServerProxy
 
     def test_registration(self):
         result = self.proxy.register(self.proxy.lockfile["samp.secret"])

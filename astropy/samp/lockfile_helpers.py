@@ -13,6 +13,8 @@ from contextlib import suppress
 from pathlib import Path
 from urllib.parse import urlparse
 
+from defusedxml import xmlrpc as defused_xmlrpc
+
 from astropy import log
 from astropy.utils.data import get_readable_fileobj
 
@@ -210,7 +212,7 @@ def check_running_hub(lockfilename):
 
     if "samp.hub.xmlrpc.url" in lockfiledict:
         try:
-            proxy = xmlrpc.ServerProxy(
+            proxy = defused_xmlrpc.ServerProxy(
                 lockfiledict["samp.hub.xmlrpc.url"].replace("\\", ""), allow_none=1
             )
             proxy.samp.hub.ping()

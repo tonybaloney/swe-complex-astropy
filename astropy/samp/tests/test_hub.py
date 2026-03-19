@@ -2,6 +2,7 @@
 
 import time
 
+import astropy.samp.hub as hub_module
 import pytest
 
 from astropy.samp import conf
@@ -15,6 +16,20 @@ def setup_module(module):
 def test_SAMPHubServer():
     """Test that SAMPHub can be instantiated"""
     SAMPHubServer(web_profile=False, mode="multiple", pool_size=1)
+
+
+def test_set_xmlrpc_callback_uses_safe_server_proxy():
+    hub = SAMPHubServer(web_profile=False, mode="multiple", pool_size=1)
+    private_key, public_id = hub._perform_standard_register()
+
+    try:
+        hub._set_xmlrpc_callback(private_key, "http://127.0.0.1:8000")
+        endpoint = hub._xmlrpc_endpoints[public_id][1]
+        proxy = endpoint._proxies.get_nowait()
+        endpoint._proxies.put(proxy)
+        assert proxy.__class__ is hub_module.defused_xmlrpc.ServerProxy
+    finally:
+        hub._xmlrpc_endpoints[public_id][1].shutdown()
 
 
 @pytest.mark.slow

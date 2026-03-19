@@ -4,7 +4,9 @@ import random
 import string
 import time
 
+import astropy.samp.lockfile_helpers as lockfile_helpers
 from astropy.samp import SAMP_STATUS_OK
+from astropy.samp.lockfile_helpers import check_running_hub
 
 TEST_REPLY = {"samp.status": SAMP_STATUS_OK, "samp.result": {"txt": "test"}}
 
@@ -68,3 +70,32 @@ def random_params(directory):
         "parameter1": "abcde",
         "parameter2": 1331,
     }
+
+
+def test_check_running_hub_uses_safe_server_proxy(monkeypatch, tmp_path):
+    recorded = {}
+    lockfile = tmp_path / ".samp"
+    lockfile.write_text("samp.hub.xmlrpc.url=http://127.0.0.1:8000\n")
+
+    class SafeProxy:
+        def __init__(self, *args, **kwargs):
+            recorded["called"] = True
+
+        @property
+        def samp(self):
+            class Hub:
+                @staticmethod
+                def ping():
+                    return None
+
+            class Samp:
+                hub = Hub()
+
+            return Samp()
+
+    monkeypatch.setattr(lockfile_helpers.defused_xmlrpc, "ServerProxy", SafeProxy)
+
+    is_running, _ = check_running_hub(str(lockfile))
+
+    assert is_running
+    assert recorded["called"]
