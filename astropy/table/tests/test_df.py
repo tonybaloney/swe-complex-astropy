@@ -446,8 +446,13 @@ class TestDataFrameConversion:
         t["a"] = np.arange(np.prod(colshape)).reshape(colshape)
 
         match backend:
-            # Pandas and PyArrow do not support multidimensional columns
-            case "pandas" | "pyarrow":
+            case "pandas":
+                df = self._to_dataframe(t, backend, use_legacy_pandas_api)
+                # Multidimensional columns stored as object dtype
+                assert df["a"].dtype == object
+                for i in range(len(t)):
+                    assert_array_equal(df["a"].iloc[i], t["a"][i])
+            case "pyarrow":
                 if ndim > 1:
                     with pytest.raises(
                         ValueError,

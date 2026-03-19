@@ -382,13 +382,22 @@ def to_pandas(
         table, index=index, backend_impl=PANDAS_LIKE
     )  # PANDAS_LIKE for pandas validation
 
-    # Encode mixins and validate columns
+    # Encode mixins
     tbl = _encode_mixins(table)
-    _validate_columns_for_backend(tbl, backend_impl=PANDAS_LIKE)  # pandas validation
 
     out = {}
 
     for name, column in tbl.columns.items():
+        # Convert multidimensional columns to object arrays so that
+        # each row element is a sub-array, matching the behaviour for
+        # variable-length list columns (see #19173).
+        if len(column.shape) > 1:
+            obj_arr = np.empty(len(column), dtype=object)
+            for i in range(len(column)):
+                obj_arr[i] = column[i]
+            out[name] = obj_arr
+            continue
+
         if getattr(column.dtype, "isnative", True):
             out[name] = column
         else:
