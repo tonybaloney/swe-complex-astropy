@@ -191,6 +191,19 @@ class SigmaClip:
 
             self._binary_dilation = binary_dilation
 
+    def __getstate__(self) -> dict:
+        # Exclude _cenfunc_parsed and _stdfunc_parsed because they may
+        # be unpicklable closures (from _dtype_dispatch with bottleneck).
+        state = self.__dict__.copy()
+        del state["_cenfunc_parsed"]
+        del state["_stdfunc_parsed"]
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        self.__dict__.update(state)
+        self._cenfunc_parsed = self._parse_cenfunc(self.cenfunc)
+        self._stdfunc_parsed = self._parse_stdfunc(self.stdfunc)
+
     def __repr__(self) -> str:
         return (
             f"SigmaClip(sigma={self.sigma}, sigma_lower={self.sigma_lower},"

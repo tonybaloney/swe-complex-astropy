@@ -648,6 +648,23 @@ def test_sigma_clip_dtypes(dtype):
     assert arr2.dtype == np.float32
 
 
+@pytest.mark.parametrize(
+    "cenfunc, stdfunc",
+    [("median", "std"), ("median", "mad_std"), ("mean", "std"), ("mean", "mad_std")],
+)
+def test_sigmaclip_pickle(cenfunc, stdfunc):
+    """Test that SigmaClip objects can be pickled and unpickled."""
+    import pickle
+
+    sigclip = SigmaClip(sigma=3.0, maxiters=5, cenfunc=cenfunc, stdfunc=stdfunc)
+    sigclip2 = pickle.loads(pickle.dumps(sigclip))
+    assert repr(sigclip) == repr(sigclip2)
+
+    with NumpyRNGContext(12345):
+        data = np.random.normal(0, 1, 100)
+    assert_equal(sigclip(data), sigclip2(data))
+
+
 def test_mad_std():
     # Check with a small array where we know how the result should differ from std
 
