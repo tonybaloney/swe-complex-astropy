@@ -500,6 +500,23 @@ class TestConvenience(FitsTestCase):
         ):
             fits.getdata(buf)
 
+    def test_getdata_lower_upper_with_image(self):
+        """Regression test: getdata with lower/upper on image data should
+        return the data, not None (see #4105)."""
+        data = np.arange(12, dtype=np.int32).reshape(3, 4)
+        prihdu = fits.PrimaryHDU(data=data)
+        hdulist = fits.HDUList([prihdu])
+        buf = io.BytesIO()
+        hdulist.writeto(buf)
+        buf.seek(0)
+
+        result = fits.getdata(buf, lower=True)
+        assert_array_equal(result, data)
+
+        buf.seek(0)
+        result = fits.getdata(buf, upper=True)
+        assert_array_equal(result, data)
+
     def test_getdata_ext_not_given_nodata_noext(self):
         # tests exception raised when there is no data in the
         # Primary HDU and there are no extension HDUs
