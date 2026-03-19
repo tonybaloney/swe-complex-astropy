@@ -197,6 +197,25 @@ col0
         Table.read(text, format="ecsv", engine="pyarrow")
 
 
+def test_read_meta_without_omap():
+    text = """
+# %ECSV 1.0
+# ---
+# meta:
+# - keyword:
+#    this_is: a_test
+# datatype:
+# - name: fake
+#   datatype: string
+fake
+0
+"""
+    table = Table.read(text, format="ascii.ecsv")
+
+    assert table.meta == {"keyword": {"this_is": "a_test"}}
+    assert list(table.meta) == ["keyword"]
+
+
 def test_write_read_roundtrip(format_engine):
     """
     Write a full-featured table with all types and see that it round-trips on

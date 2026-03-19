@@ -63,7 +63,7 @@ def _construct_odict(load, node):
     except the data type is changed to OrderedDict() and setitem is
     used instead of append in the loop
     """
-    omap = {}
+    omap = OrderedDict()
     yield omap
     if not isinstance(node, yaml.SequenceNode):
         raise yaml.constructor.ConstructorError(
@@ -414,8 +414,6 @@ def get_header_from_yaml(lines):
     # Now actually load the YAML data structure into `meta`
     header_yaml = textwrap.dedent("\n".join(lines))
     try:
-        header = yaml.load(header_yaml, Loader=TableLoader)
+        return yaml.load(header_yaml, Loader=TableLoader)
     except Exception as err:
         raise YamlParseError() from err
-
-    return header
