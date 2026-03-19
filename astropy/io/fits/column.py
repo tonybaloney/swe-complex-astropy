@@ -14,7 +14,6 @@ from itertools import pairwise
 from textwrap import indent
 
 import numpy as np
-from numpy import char as chararray
 
 from astropy.utils import lazyproperty
 from astropy.utils.exceptions import AstropyUserWarning
@@ -696,14 +695,14 @@ class Column(NotifierMixin):
         # input arrays can be just list or tuple, not required to be ndarray
         # does not include Object array because there is no guarantee
         # the elements in the object array are consistent.
-        if not isinstance(array, (np.ndarray, chararray.chararray, Delayed)):
+        if not isinstance(array, (np.ndarray, Delayed)):
             try:  # try to convert to a ndarray first
                 if array is not None:
                     array = np.array(array)
             except Exception:
                 try:  # then try to convert it to a strings array
                     itemsize = int(recformat[1:])
-                    array = chararray.array(array, itemsize=itemsize)
+                    array = np.array(array, dtype=f"S{itemsize}")
                 except ValueError:
                     # then try variable length array
                     # Note: This includes _FormatQ by inheritance
@@ -1388,7 +1387,9 @@ class Column(NotifierMixin):
                         fsize = dims[-1]
                     else:
                         fsize = np.dtype(format.recformat).itemsize
-                    return chararray.array(array, itemsize=fsize, copy=False)
+                    return np.array(
+                        array, dtype=f"{array.dtype.kind}{fsize}"
+                    )
                 else:
                     return _convert_array(array, np.dtype(format.recformat))
             elif "L" in format:
@@ -2068,6 +2069,33 @@ class _AsciiColDefs(ColDefs):
 # Utilities
 
 
+def _bytes_array(data, itemsize):
+    """Create a numpy character array, replacing deprecated ``np.char.array``.
+
+    For ``bytes`` or ``str`` input the result always has dtype ``S{itemsize}``.
+    For ``np.ndarray`` input the string kind (``S`` or ``U``) is preserved.
+
+    Parameters
+    ----------
+    data : str, bytes, or array-like
+        Input data to convert.
+    itemsize : int
+        Number of characters per element.
+
+    Returns
+    -------
+    np.ndarray
+        Array with dtype ``S{itemsize}`` or ``U{itemsize}``.
+    """
+    if isinstance(data, str):
+        data = data.encode("ascii")
+    if isinstance(data, bytes):
+        return np.frombuffer(data, dtype=f"S{itemsize}").copy()
+    if isinstance(data, np.ndarray) and data.dtype.kind == "U":
+        return np.array(data, dtype=f"U{itemsize}")
+    return np.array(data, dtype=f"S{itemsize}")
+
+
 class _VLF(np.ndarray):
     """Variable length field object."""
 
@@ -2082,7 +2110,7 @@ class _VLF(np.ndarray):
             try:
                 # this handles ['abc'] and [['a','b','c']]
                 # equally, beautiful!
-                input = [chararray.array(x, itemsize=1) for x in input]
+                input = [_bytes_array(x, itemsize=1) for x in input]
             except Exception:
                 raise ValueError(f"Inconsistent input data array: {input}")
 
@@ -2105,10 +2133,10 @@ class _VLF(np.ndarray):
         """
         if isinstance(value, np.ndarray) and value.dtype == self.dtype:
             pass
-        elif isinstance(value, chararray.chararray) and value.itemsize == 1:
+        elif isinstance(value, np.ndarray) and value.dtype == np.dtype("S1"):
             pass
         elif self.element_dtype == "S":
-            value = chararray.array(value, itemsize=1)
+            value = _bytes_array(value, itemsize=1)
         else:
             value = np.array(value, dtype=self.element_dtype)
         np.ndarray.__setitem__(self, key, value)
@@ -2262,7 +2290,7 @@ def _makep(array, descr_output, format, nrows=None):
             else:
                 rowval = [0] * data_output.max
         if format.dtype == "S":
-            data_output[idx] = chararray.array(encode_ascii(rowval), itemsize=1)
+            data_output[idx] = _bytes_array(encode_ascii(rowval), itemsize=1)
         else:
             data_output[idx] = np.array(rowval, dtype=format.dtype)
 

@@ -8,7 +8,6 @@ from contextlib import suppress
 from functools import reduce
 
 import numpy as np
-from numpy import char as chararray
 
 from astropy.utils import lazyproperty
 
@@ -831,7 +830,7 @@ class FITS_rec(np.recarray):
                 dt = np.dtype(recformat.dtype + str(1))
                 arr_len = count * dt.itemsize
                 da = raw_data[offset : offset + arr_len].view(dt)
-                da = np.char.array(da.view(dtype=dt), itemsize=count)
+                da = np.array(da, dtype=f"S{count}")
                 dummy[idx] = decode_ascii(da)
             else:
                 dt = np.dtype(recformat.dtype)
@@ -1204,7 +1203,7 @@ class FITS_rec(np.recarray):
                 if isinstance(self._coldefs, _AsciiColDefs):
                     self._scale_back_ascii(index, dummy, raw_field)
                 # binary table string column
-                elif isinstance(raw_field, chararray.chararray):
+                elif raw_field.dtype.char in ("S", "U"):
                     self._scale_back_strings(index, dummy, raw_field)
                 # all other binary table columns
                 else:
@@ -1359,10 +1358,15 @@ def _get_recarray_field(array, key):
     """
     # Numpy >= 1.10.dev recarray no longer returns chararrays for strings
     # This is currently needed for backwards-compatibility and for
-    # automatic truncation of trailing whitespace
+    # automatic truncation of trailing whitespace.
+    # np.char.chararray is deprecated in numpy 2.5+; suppress the warning
+    # while we still rely on chararray's comparison semantics.
     field = np.recarray.field(array, key)
-    if field.dtype.char in ("S", "U") and not isinstance(field, chararray.chararray):
-        field = field.view(chararray.chararray)
+    if field.dtype.char in ("S", "U"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            if not isinstance(field, np.char.chararray):
+                field = field.view(np.char.chararray)
     return field
 
 
