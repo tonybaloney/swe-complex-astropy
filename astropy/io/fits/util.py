@@ -870,7 +870,7 @@ def _rstrip_inplace(array):
     # Note: the code will work if this fails; the chunks will just be larger.
     if b.ndim > 2:
         try:
-            b.shape = -1, b.shape[-1]
+            b = b.reshape(-1, b.shape[-1])
         except AttributeError:  # can occur for non-contiguous arrays
             pass
     for j in range(0, b.shape[0], bufsize):
