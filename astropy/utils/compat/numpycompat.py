@@ -18,6 +18,7 @@ __all__ = [
     "NUMPY_LT_2_4",
     "NUMPY_LT_2_4_1",
     "NUMPY_LT_2_5",
+    "_set_array_shape",
 ]
 
 # TODO: It might also be nice to have aliases to these named for specific
@@ -29,6 +30,19 @@ NUMPY_LT_2_3 = not minversion(np, "2.3.0.dev0")
 NUMPY_LT_2_4 = not minversion(np, "2.4.0.dev0")
 NUMPY_LT_2_4_1 = not minversion(np, "2.4.1.dev0")
 NUMPY_LT_2_5 = not minversion(np, "2.5.0.dev0")
+
+
+if NUMPY_LT_2_5:
+
+    def _set_array_shape(arr, shape):
+        """Set array shape in-place, avoiding the deprecated shape mutation API."""
+        arr.shape = shape
+
+else:
+
+    def _set_array_shape(arr, shape):
+        """Set array shape in-place, avoiding the deprecated shape mutation API."""
+        arr._set_shape(shape)
 
 
 def __getattr__(attr):
