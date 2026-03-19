@@ -620,8 +620,12 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
             new_info = type(
                 cls.__name__ + "Info",
                 (MaskedArraySubclassInfo, data_info.__class__),
-                dict(attr_names=attr_names),
+                {
+                    "__module__": cls.__module__,
+                    "attr_names": attr_names,
+                },
             )
+            setattr(__import__(cls.__module__, fromlist=[cls.__name__]), new_info.__name__, new_info)
             cls.info = new_info()
 
     # The two pieces typically overridden.

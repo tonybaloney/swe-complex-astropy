@@ -1,6 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Test behavior related to masked tables"""
 
+import pickle
+
 import numpy as np
 import numpy.ma as ma
 import pytest
@@ -694,3 +696,13 @@ def test_qtable_masked_true_basics():
     assert_array_equal(tab["test"].mask, [True, False])
     tab["test"].mask |= [True, True]
     assert_array_equal(tab["test"].mask, [True, True])
+
+
+def test_pickle_qtable_masked_quantity(protocol):
+    # Regression test for gh-19142.
+    tab = QTable([Masked(np.arange(3) * u.m, mask=[True, False, False])], names=["a"])
+    tab2 = pickle.loads(pickle.dumps(tab, protocol=protocol))
+    assert isinstance(tab2, QTable)
+    assert np.all(tab2["a"].unmasked == tab["a"].unmasked)
+    assert np.all(tab2["a"].mask == tab["a"].mask)
+    assert tab2["a"].unit == tab["a"].unit
