@@ -489,6 +489,20 @@ class MaskedNDArrayInfo(MaskedInfoBase, ParentDtypeInfo):
         return self._parent_cls.from_unmasked(**map)
 
 
+def _reconstruct_masked_info(data_cls, state):
+    """Reconstruct a dynamically created masked info class instance for unpickling.
+
+    Dynamically created info classes (e.g. MaskedQuantityInfo) are not
+    importable from any module, so pickle cannot resolve them by name.
+    This helper recreates the class via ``Masked(data_cls)`` and restores
+    the pickled state.
+    """
+    masked_cls = Masked(data_cls)
+    info = type(masked_cls.__dict__["info"])(bound=True)
+    info.__setstate__(state)
+    return info
+
+
 class MaskedArraySubclassInfo(MaskedInfoBase):
     """Mixin class to create a subclasses such as MaskedQuantityInfo."""
 
@@ -503,6 +517,12 @@ class MaskedArraySubclassInfo(MaskedInfoBase):
         data_cls = self._parent._data_cls
         out.setdefault("__class__", data_cls.__module__ + "." + data_cls.__name__)
         return out
+
+    def __reduce__(self):
+        # Dynamically created info classes (e.g. MaskedQuantityInfo) are not
+        # importable from any module, so pickle cannot resolve them by name.
+        # Use a helper that recreates the class via Masked(data_cls).
+        return (_reconstruct_masked_info, (type(self)._data_cls, self.__getstate__()))
 
 
 def _comparison_method(op):
@@ -620,7 +640,7 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
             new_info = type(
                 cls.__name__ + "Info",
                 (MaskedArraySubclassInfo, data_info.__class__),
-                dict(attr_names=attr_names),
+                dict(attr_names=attr_names, _data_cls=cls._data_cls),
             )
             cls.info = new_info()
 
