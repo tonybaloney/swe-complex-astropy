@@ -2001,6 +2001,19 @@ class TestTableFunctions(FitsTestCase):
             assert hdul[1].data.tobytes().decode("raw-unicode-escape") == s
             assert (hdul[1].data["MEMNAME"] == a).all()
 
+    def test_string_column_scalar_access_strips_trailing_whitespace(self):
+        values = np.array(["abc", "xy ", "p  "])
+        hdu = fits.BinTableHDU.from_columns(
+            [fits.Column(name="value", format="3A", array=values)]
+        )
+
+        field = hdu.data.field("value")
+
+        assert isinstance(field, np.ndarray)
+        assert field.tolist() == ["abc", "xy", "p"]
+        assert field[1] == "xy"
+        assert hdu.data[1]["value"] == "xy"
+
     def test_multi_dimensional_columns(self):
         """
         Tests the multidimensional column implementation with both numeric
