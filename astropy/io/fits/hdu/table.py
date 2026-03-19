@@ -11,7 +11,6 @@ import textwrap
 from contextlib import suppress
 
 import numpy as np
-from numpy import char as chararray
 
 # This module may have many dependencies on astropy.io.fits.column, but
 # astropy.io.fits.column has fewer dependencies overall, so it's easier to
@@ -1489,7 +1488,7 @@ def _binary_table_byte_swap(data):
         formats.append(field_dtype)
         offsets.append(field_offset)
 
-        if isinstance(field, chararray.chararray):
+        if field.dtype.kind in "SU":
             continue
 
         # only swap unswapped
@@ -1506,11 +1505,7 @@ def _binary_table_byte_swap(data):
         if isinstance(recformat, _FormatP):
             coldata = data.field(idx)
             for c in coldata:
-                if (
-                    not isinstance(c, chararray.chararray)
-                    and c.itemsize > 1
-                    and c.dtype.str[0] in swap_types
-                ):
+                if c.dtype.kind not in "SU" and c.itemsize > 1 and c.dtype.str[0] in swap_types:
                     to_swap.append(c)
 
     for arr in reversed(to_swap):

@@ -8,9 +8,9 @@ from contextlib import suppress
 from functools import reduce
 
 import numpy as np
-from numpy import char as chararray
 
 from astropy.utils import lazyproperty
+from astropy.utils.exceptions import AstropyDeprecationWarning
 
 from .column import (
     _VLF,
@@ -1204,7 +1204,7 @@ class FITS_rec(np.recarray):
                 if isinstance(self._coldefs, _AsciiColDefs):
                     self._scale_back_ascii(index, dummy, raw_field)
                 # binary table string column
-                elif isinstance(raw_field, chararray.chararray):
+                elif raw_field.dtype.kind in "SU":
                     self._scale_back_strings(index, dummy, raw_field)
                 # all other binary table columns
                 else:
@@ -1351,18 +1351,52 @@ class FITS_rec(np.recarray):
         return [list(row) for row in zip(*column_lists)]
 
 
+class _ASCIIField(np.ndarray):
+    def __array_finalize__(self, obj):
+        return
+
+    def __array_wrap__(self, out_arr, context=None, return_scalar=False):
+        if return_scalar:
+            return out_arr[()]
+        return out_arr.view(type(self))
+
+    def __getattribute__(self, attr):
+        if attr in dir(np.char.chararray):
+            warnings.warn(
+                "FITS string columns no longer use numpy.char.chararray; "
+                f"accessing chararray method {attr!r} is deprecated.",
+                AstropyDeprecationWarning,
+                stacklevel=2,
+            )
+        return super().__getattribute__(attr)
+
+
+class _CharArrayCompatMeta(type):
+    def __instancecheck__(cls, instance):
+        warnings.warn(
+            "FITS string columns no longer use numpy.char.chararray; "
+            "isinstance checks are deprecated.",
+            AstropyDeprecationWarning,
+            stacklevel=2,
+        )
+        return isinstance(instance, _ASCIIField)
+
+
+class chararray:
+    class chararray(_ASCIIField, metaclass=_CharArrayCompatMeta):
+        pass
+
+
 def _get_recarray_field(array, key):
     """
     Compatibility function for using the recarray base class's field method.
-    This incorporates the legacy functionality of returning string arrays as
-    Numeric-style chararray objects.
+    This preserves the legacy behavior of trimming trailing whitespace from
+    string fields returned from FITS record arrays.
     """
-    # Numpy >= 1.10.dev recarray no longer returns chararrays for strings
-    # This is currently needed for backwards-compatibility and for
-    # automatic truncation of trailing whitespace
     field = np.recarray.field(array, key)
-    if field.dtype.char in ("S", "U") and not isinstance(field, chararray.chararray):
-        field = field.view(chararray.chararray)
+    if field.dtype.char in ("S", "U"):
+        field = field.view(_ASCIIField)
+        field[:] = field.rstrip()
     return field
 
 

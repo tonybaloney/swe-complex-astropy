@@ -24,7 +24,7 @@ from astropy.io.fits.util import decode_ascii
 from astropy.io.fits.verify import VerifyError
 from astropy.table import Table
 from astropy.units import Unit, UnitsWarning, UnrecognizedUnit
-from astropy.utils.exceptions import AstropyUserWarning
+from astropy.utils.exceptions import AstropyDeprecationWarning, AstropyUserWarning
 
 from .conftest import FitsTestCase
 from .test_connect import TestMultipleHDU
@@ -1964,6 +1964,22 @@ class TestTableFunctions(FitsTestCase):
             assert hdul[1].columns["a"].format == "0A"
             np.testing.assert_array_equal(hdul[1].data["a"], [""])
             np.testing.assert_array_equal(hdul[1].data["b"], [12])
+
+    def test_fits_string_fields_are_stripped_without_chararray(self):
+        col = fits.Column(name="name", format="A5", array=np.array(["abc", "xy"]))
+        hdu = fits.BinTableHDU.from_columns([col])
+
+        field = hdu.data["name"]
+        assert isinstance(field, np.ndarray)
+        assert field.tolist() == ["abc", "xy"]
+
+    def test_fits_string_fields_chararray_compat_warning(self):
+        col = fits.Column(name="name", format="A5", array=np.array(["abc", "xy"]))
+        hdu = fits.BinTableHDU.from_columns([col])
+
+        field = hdu.data["name"]
+        with pytest.warns(AstropyDeprecationWarning, match="isinstance checks are deprecated"):
+            assert isinstance(field, chararray.chararray)
 
     def test_string_column_padding(self):
         a = ["img1", "img2", "img3a", "p"]
