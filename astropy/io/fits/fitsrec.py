@@ -11,6 +11,7 @@ import numpy as np
 from numpy import char as chararray
 
 from astropy.utils import lazyproperty
+from astropy.utils.compat.numpycompat import _set_array_shape
 
 from .column import (
     _VLF,
@@ -1028,7 +1029,7 @@ class FITS_rec(np.recarray):
                 dtype = (f"|{fmt}{dim[-1]}", dim[:-1])
                 field.dtype = dtype
             else:
-                field.shape = (field.shape[0],) + dim
+                _set_array_shape(field, (field.shape[0],) + dim)
 
         return field
 

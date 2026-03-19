@@ -31,6 +31,18 @@ NUMPY_LT_2_4_1 = not minversion(np, "2.4.1.dev0")
 NUMPY_LT_2_5 = not minversion(np, "2.5.0.dev0")
 
 
+def _set_array_shape(array, shape):
+    """Set shape of an ndarray in-place, compatible with NumPy 2.5+.
+
+    Direct mutation of ``ndarray.shape`` is deprecated since NumPy 2.5.
+    ``ndarray._set_shape`` is the non-deprecated, strict semantic equivalent.
+    """
+    if NUMPY_LT_2_5:
+        array.shape = shape
+    else:
+        array._set_shape(shape)
+
+
 def __getattr__(attr):
     # MHvK: Added in 8.0. Regular deprecation in 9.0, remove in 10.0?
     if attr == "COPY_IF_NEEDED":
