@@ -1,5 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
+import pickle
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose, assert_equal
@@ -131,6 +133,22 @@ def test_sigma_clip_mean():
         sobj2 = SigmaClip(sigma=1, maxiters=2, cenfunc=np.nanmean)
         assert_equal(sobj1(data), sobj2(data))
         assert_equal(sobj1(data, axis=0), sobj2(data, axis=0))
+
+
+@pytest.mark.parametrize("grow", [False, 1])
+def test_sigma_clip_pickle(grow):
+    sigclip = SigmaClip(sigma=3.0, maxiters=5, grow=grow)
+    unpickled = pickle.loads(pickle.dumps(sigclip))
+
+    assert unpickled.sigma == sigclip.sigma
+    assert unpickled.sigma_lower == sigclip.sigma_lower
+    assert unpickled.sigma_upper == sigclip.sigma_upper
+    assert unpickled.maxiters == sigclip.maxiters
+    assert unpickled.cenfunc == sigclip.cenfunc
+    assert unpickled.stdfunc == sigclip.stdfunc
+    assert unpickled.grow == sigclip.grow
+    assert unpickled._cenfunc_parsed is not None
+    assert unpickled._stdfunc_parsed is not None
 
 
 def test_sigma_clip_invalid_cenfunc_stdfunc():

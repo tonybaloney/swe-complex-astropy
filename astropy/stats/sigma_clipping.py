@@ -191,6 +191,23 @@ class SigmaClip:
 
             self._binary_dilation = binary_dilation
 
+    def __getstate__(self) -> dict:
+        state = self.__dict__.copy()
+        state.pop("_cenfunc_parsed", None)
+        state.pop("_stdfunc_parsed", None)
+        state.pop("_binary_dilation", None)
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        self.__dict__.update(state)
+        self._cenfunc_parsed = self._parse_cenfunc(self.cenfunc)
+        self._stdfunc_parsed = self._parse_stdfunc(self.stdfunc)
+
+        if self.grow:
+            from scipy.ndimage import binary_dilation
+
+            self._binary_dilation = binary_dilation
+
     def __repr__(self) -> str:
         return (
             f"SigmaClip(sigma={self.sigma}, sigma_lower={self.sigma_lower},"
