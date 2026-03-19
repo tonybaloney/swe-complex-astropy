@@ -274,6 +274,17 @@ def test_helper_uniform_samples():
     assert np.all(np.max(udist.distribution, axis=-1) < [3.5, 5, 3.5] * u.pc)
 
 
+def test_helper_uniform_samples_ndim():
+    # Regression test: uniform should work for ndim >= 2 inputs
+    lower = np.array([[1, 2], [3, 4]])
+    upper = np.array([[5, 6], [7, 8]])
+    udist = ds.uniform(lower=lower, upper=upper, n_samples=100)
+    assert udist.shape == (2, 2)
+    assert udist.distribution.shape == (2, 2, 100)
+    assert np.all(np.min(udist.distribution, axis=-1) >= lower)
+    assert np.all(np.max(udist.distribution, axis=-1) <= upper)
+
+
 def test_helper_normal_exact():
     pytest.skip("distribution stretch goal not yet implemented")
     centerq = [1, 5, 30, 400] * u.kpc
