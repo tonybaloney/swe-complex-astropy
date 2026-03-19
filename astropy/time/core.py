@@ -912,29 +912,33 @@ class TimeBase(MaskableShapedLikeNDArray):
         # since we may have to return those to their original shape if a later
         # shape-setting fails.
         reshaped = []
-        oldshape = self.shape
 
-        # In-place reshape of data/attributes.  Need to access _time.jd1/2 not
-        # self.jd1/2 because the latter are not guaranteed to be the actual
-        # data, and in fact should not be directly changeable from the public
-        # API.
+        # Reshape of data/attributes.  Use internal attribute names to bypass
+        # property setters, and use reshape() instead of deprecated in-place
+        # shape assignment, verifying no copy is made via shares_memory.
         for obj, attr in (
-            (self._time, "jd1"),
-            (self._time, "jd2"),
+            (self._time, "_jd1"),
+            (self._time, "_jd2"),
             (self, "_delta_ut1_utc"),
             (self, "_delta_tdb_tt"),
-            (self, "location"),
+            (self, "_location"),
         ):
             val = getattr(obj, attr, None)
             if val is not None and val.size > 1:
                 try:
-                    val.shape = shape
+                    new_val = val.reshape(shape)
+                    if not np.shares_memory(new_val, val):
+                        raise AttributeError(
+                            "Incompatible shape for in-place modification. "
+                            "Use `.reshape()` to make a copy with the desired "
+                            "shape."
+                        )
                 except Exception:
-                    for val2 in reshaped:
-                        val2.shape = oldshape
+                    for obj2, attr2, oldval2 in reshaped:
+                        setattr(obj2, attr2, oldval2)
                     raise
-                else:
-                    reshaped.append(val)
+                setattr(obj, attr, new_val)
+                reshaped.append((obj, attr, val))
 
     def _shaped_like_input(self, value):
         if self.masked:
