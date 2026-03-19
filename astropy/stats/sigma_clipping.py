@@ -213,6 +213,11 @@ class SigmaClip:
             lines.append(f"    {attr}: {repr(getattr(self, attr))}")
         return "\n".join(lines)
 
+    def __setstate__(self, state: dict) -> None:
+        self.__dict__.update(state)
+        self._cenfunc_parsed = self._parse_cenfunc(self.cenfunc)
+        self._stdfunc_parsed = self._parse_stdfunc(self.stdfunc)
+
     @staticmethod
     def _parse_cenfunc(
         cenfunc: Literal["median", "mean"] | Callable | None,

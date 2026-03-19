@@ -1,5 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
+import pickle
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose, assert_equal
@@ -131,6 +133,13 @@ def test_sigma_clip_mean():
         sobj2 = SigmaClip(sigma=1, maxiters=2, cenfunc=np.nanmean)
         assert_equal(sobj1(data), sobj2(data))
         assert_equal(sobj1(data, axis=0), sobj2(data, axis=0))
+
+
+def test_sigma_clip_pickle():
+    loaded = pickle.loads(pickle.dumps(SigmaClip(sigma=3.0, maxiters=5)))
+
+    assert loaded.cenfunc == "median"
+    assert loaded.stdfunc == "std"
 
 
 def test_sigma_clip_invalid_cenfunc_stdfunc():
