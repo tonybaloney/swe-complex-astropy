@@ -621,7 +621,7 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
             new_info = type(
                 cls.__name__ + "Info",
                 (MaskedArraySubclassInfo, data_info.__class__),
-                dict(attr_names=attr_names),
+                dict(attr_names=attr_names, __module__=__name__),
             )
             cls.info = new_info()
 
@@ -1448,6 +1448,10 @@ def __getattr__(key):
         from astropy.table.serialize import __construct_mixin_classes
 
         base_class_name = key[len(Masked.__name__) :]
+        is_info = base_class_name.endswith("Info")
+        if is_info:
+            base_class_name = base_class_name[: -len("Info")]
+
         for base_class_qualname in __construct_mixin_classes:
             module, _, name = base_class_qualname.rpartition(".")
             if name == base_class_name:
@@ -1457,6 +1461,6 @@ def __getattr__(key):
                 # But only return it if it is a standard one, not one
                 # where we just used the ndarray fallback.
                 if base_class in Masked._masked_classes:
-                    return masked_class
+                    return masked_class.info.__class__ if is_info else masked_class
 
     raise AttributeError(f"module '{__name__}' has no attribute '{key}'")

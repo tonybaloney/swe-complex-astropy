@@ -5,6 +5,7 @@ Functions, including ufuncs, are tested in test_functions.py
 """
 
 import operator
+import pickle
 import sys
 
 import numpy as np
@@ -227,6 +228,21 @@ class TestMaskedClassCreation:
         assert Masked(MyList) is type(mml)
 
 
+@pytest.mark.parametrize(
+    ("base_cls", "module_name", "class_name"),
+    [
+        (u.Quantity, "astropy.utils.masked.core", "MaskedQuantityInfo"),
+        (Longitude, "astropy.utils.masked.core", "MaskedLongitudeInfo"),
+    ],
+)
+def test_import_masked_info_class(base_cls, module_name, class_name):
+    masked_cls = Masked(base_cls)
+    assert masked_cls.info.__class__.__module__ == module_name
+
+    imported_cls = getattr(__import__(module_name, fromlist=[class_name]), class_name)
+    assert imported_cls is masked_cls.info.__class__
+
+
 class TestMaskedNDArraySubclassCreation:
     """Test that masked subclasses can be created directly and indirectly."""
 
@@ -320,6 +336,15 @@ class TestMaskedQuantityInitialization(TestMaskedArrayInitialization, QuantitySe
         # Ensure we have used MaskedQuantity before - just in case a single test gets
         # called; see gh-15316.
         cls.MQ = Masked(Quantity)
+
+    def test_pickle_with_initialized_info(self):
+        ma = Masked([1, 2, 3] * u.m, mask=[True, False, False])
+        ma.info
+
+        mp = pickle.loads(pickle.dumps(ma))
+
+        assert_masked_equal(mp, ma)
+        assert isinstance(mp, ma.__class__)
 
     def test_masked_quantity_getting(self):
         # First check setup_class (or previous use) defined a cache entry.

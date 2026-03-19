@@ -6,7 +6,8 @@ from astropy.coordinates import SkyCoord
 from astropy.table import Column, MaskedColumn, QTable, Table
 from astropy.table.table_helpers import simple_table
 from astropy.time import Time
-from astropy.units import Quantity, deg
+from astropy.units import Quantity, deg, m
+from astropy.utils.masked import Masked
 
 
 def test_pickle_column(protocol):
@@ -155,3 +156,14 @@ def test_pickle_indexed_table(protocol):
     for index, indexp in zip(t.indices, tp.indices):
         assert np.all(index.data.data == indexp.data.data)
         assert index.data.data.colnames == indexp.data.data.colnames
+
+
+def test_pickle_qtable_with_masked_quantity(protocol):
+    t = QTable({"a": Masked([1, 2, 3] * m, mask=[True, False, False])})
+    t["a"].info
+
+    tp = pickle.loads(pickle.dumps(t, protocol=protocol))
+
+    assert isinstance(tp, QTable)
+    assert np.all(tp["a"].unmasked == t["a"].unmasked)
+    assert np.all(tp["a"].mask == t["a"].mask)
