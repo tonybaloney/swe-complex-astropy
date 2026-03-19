@@ -463,13 +463,14 @@ class BaseRepresentationOrDifferential(MaskableShapedLikeNDArray):
             val = getattr(self, component)
             if val.size > 1:
                 try:
-                    val.shape = shape
+                    new_val = val.reshape(shape)
                 except Exception:
-                    for val2 in reshaped:
-                        val2.shape = oldshape
+                    for component2, oldval2 in reversed(reshaped):
+                        setattr(self, "_" + component2, oldval2)
                     raise
                 else:
-                    reshaped.append(val)
+                    setattr(self, "_" + component, new_val)
+                    reshaped.append((component, val))
 
     @property
     def masked(self):
@@ -1184,19 +1185,23 @@ class BaseRepresentation(BaseRepresentationOrDifferential):
     @BaseRepresentationOrDifferential.shape.setter
     def shape(self, shape):
         orig_shape = self.shape
+        original_differentials = self.differentials.copy()
+        reshaped_differentials = {}
+
+        for key, differential in original_differentials.items():
+            try:
+                reshaped_differentials[key] = differential.reshape(shape)
+            except Exception:
+                raise
 
         # See: https://stackoverflow.com/questions/3336767/ for an example
         BaseRepresentationOrDifferential.shape.fset(self, shape)
 
-        # also try to perform shape-setting on any associated differentials
         try:
-            for k in self.differentials:
-                self.differentials[k].shape = shape
+            self._differentials.update(reshaped_differentials)
         except Exception:
             BaseRepresentationOrDifferential.shape.fset(self, orig_shape)
-            for k in self.differentials:
-                self.differentials[k].shape = orig_shape
-
+            self._differentials = original_differentials
             raise
 
     def norm(self):

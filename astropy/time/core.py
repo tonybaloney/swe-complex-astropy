@@ -927,13 +927,14 @@ class TimeBase(MaskableShapedLikeNDArray):
             val = getattr(obj, attr, None)
             if val is not None and val.size > 1:
                 try:
-                    val.shape = shape
+                    new_val = val.reshape(shape)
                 except Exception:
-                    for val2 in reshaped:
-                        val2.shape = oldshape
+                    for obj2, attr2, oldval2 in reversed(reshaped):
+                        setattr(obj2, attr2, oldval2)
                     raise
                 else:
-                    reshaped.append(val)
+                    setattr(obj, attr, new_val)
+                    reshaped.append((obj, attr, val))
 
     def _shaped_like_input(self, value):
         if self.masked:
