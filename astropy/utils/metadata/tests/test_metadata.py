@@ -249,9 +249,9 @@ def test_common_dtype_string():
     u4 = np.array(["1234"])
     b3 = np.array([b"123"])
     b5 = np.array([b"12345"])
-    assert common_dtype([u3, u4]).endswith("U4")
-    assert common_dtype([b5, u4]).endswith("U5")
-    assert common_dtype([b3, b5]).endswith("S5")
+    assert common_dtype([u3, u4]) == np.dtype("U4")
+    assert common_dtype([b5, u4]) == np.dtype("U5")
+    assert common_dtype([b3, b5]) == np.dtype("S5")
 
 
 def test_common_dtype_basic():
@@ -262,8 +262,30 @@ def test_common_dtype_basic():
     with pytest.raises(MergeConflictError):
         common_dtype([i8, u3])
 
-    assert common_dtype([i8, i8]).endswith("i8")
-    assert common_dtype([i8, f8]).endswith("f8")
+    assert common_dtype([i8, i8]) == np.dtype("i8")
+    assert common_dtype([i8, f8]) == np.dtype("f8")
+
+
+def test_common_dtype_returns_dtype_object():
+    """Regression test: common_dtype must return a np.dtype object, not a string.
+
+    Custom user-defined dtypes (e.g. numpy-quaddtype) have string representations
+    that cannot be parsed back by np.dtype(), so returning the dtype object is
+    essential for table operations like vstack and join to work. See
+    https://github.com/astropy/astropy/issues/19199
+    """
+    i4 = np.array([1, 2], dtype=np.int32)
+    f8 = np.array([1.0, 2.0], dtype=np.float64)
+    u4 = np.array(["1234"])
+
+    result = common_dtype([i4, f8])
+    assert isinstance(result, np.dtype)
+
+    result = common_dtype([i4, i4])
+    assert isinstance(result, np.dtype)
+
+    result = common_dtype([u4, u4])
+    assert isinstance(result, np.dtype)
 
 
 def test_common_dtype_exhaustive():

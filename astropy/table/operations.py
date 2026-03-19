@@ -1088,8 +1088,8 @@ def _get_join_sort_idxs(keys, left, right):
             sort_right[sort_key] = right_sort_col
 
             # Build up dtypes for the structured array that gets sorted.
-            dtype_str = common_dtype([left_sort_col, right_sort_col])
-            sort_keys_dtypes.append((sort_key, dtype_str))
+            col_dtype = common_dtype([left_sort_col, right_sort_col])
+            sort_keys_dtypes.append((sort_key, col_dtype))
             ii += 1
 
     # Make the empty sortable table and fill it
