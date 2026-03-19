@@ -253,6 +253,14 @@ def getdata(filename, *args, header=None, lower=None, upper=None, view=None, **k
             return
         data.dtype.names = [trans(n) for n in data.dtype.names]
 
+        # Also update the column names in _coldefs so that bracket-style
+        # access (data['COL']) stays consistent with the new dtype names.
+        coldefs = getattr(data, "_coldefs", None)
+        if coldefs is not None:
+            for col in coldefs.columns:
+                col.name = trans(col.name)
+            coldefs.__dict__.pop("names", None)
+
     # allow different views into the underlying ndarray.  Keep the original
     # view just in case there is a problem
     if isinstance(view, type) and issubclass(view, np.ndarray):

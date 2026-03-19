@@ -513,3 +513,27 @@ class TestConvenience(FitsTestCase):
             IndexError, match="No data in Primary HDU and no extension HDU found."
         ):
             fits.getdata(buf)
+
+    def test_getdata_upper_lower(self, tmp_path):
+        """Regression test for getdata with upper/lower keyword arguments.
+
+        The upper and lower keywords should transform column names in both
+        the dtype and the internal column definitions so that bracket-style
+        column access (data['COL']) works correctly.
+        """
+        lower_path = str(tmp_path / "lower.fits")
+        upper_path = str(tmp_path / "upper.fits")
+        Table([np.zeros(5), np.ones(5)], names=["a", "b"]).write(lower_path)
+        Table([np.zeros(5), np.ones(5)], names=["A", "B"]).write(upper_path)
+
+        # upper=True should uppercase column names and allow bracket access
+        data = fits.getdata(lower_path, 1, upper=True)
+        assert data.dtype.names == ("A", "B")
+        assert_array_equal(data["A"], np.zeros(5))
+        assert_array_equal(data["a"], np.zeros(5))
+
+        # lower=True should lowercase column names and allow bracket access
+        data = fits.getdata(upper_path, 1, lower=True)
+        assert data.dtype.names == ("a", "b")
+        assert_array_equal(data["a"], np.zeros(5))
+        assert_array_equal(data["A"], np.zeros(5))
