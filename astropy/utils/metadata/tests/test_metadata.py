@@ -249,9 +249,9 @@ def test_common_dtype_string():
     u4 = np.array(["1234"])
     b3 = np.array([b"123"])
     b5 = np.array([b"12345"])
-    assert common_dtype([u3, u4]).endswith("U4")
-    assert common_dtype([b5, u4]).endswith("U5")
-    assert common_dtype([b3, b5]).endswith("S5")
+    assert common_dtype([u3, u4]).str.endswith("U4")
+    assert common_dtype([b5, u4]).str.endswith("U5")
+    assert common_dtype([b3, b5]).str.endswith("S5")
 
 
 def test_common_dtype_basic():
@@ -262,8 +262,27 @@ def test_common_dtype_basic():
     with pytest.raises(MergeConflictError):
         common_dtype([i8, u3])
 
-    assert common_dtype([i8, i8]).endswith("i8")
-    assert common_dtype([i8, f8]).endswith("f8")
+    assert common_dtype([i8, i8]).str.endswith("i8")
+    assert common_dtype([i8, f8]).str.endswith("f8")
+
+
+def test_common_dtype_returns_dtype():
+    """common_dtype should return a numpy dtype object, not a string."""
+    i8 = np.array(1, dtype=np.int64)
+    result = common_dtype([i8, i8])
+    assert isinstance(result, np.dtype)
+
+
+def test_common_dtype_custom_dtype():
+    """common_dtype should work with user-defined dtypes (regression, gh-19199)."""
+    StringDType = getattr(np.dtypes, "StringDType", None)
+    if StringDType is None:
+        pytest.skip("requires numpy with StringDType")
+    dt = StringDType()
+    a = np.array(["hello"], dtype=dt)
+    b = np.array(["world"], dtype=dt)
+    result = common_dtype([a, b])
+    assert result == dt
 
 
 def test_common_dtype_exhaustive():

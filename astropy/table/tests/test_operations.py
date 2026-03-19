@@ -2340,6 +2340,21 @@ def test_vstack_unicode():
     assert t2["a"].itemsize == 4
 
 
+def test_vstack_custom_dtype():
+    """
+    Test that vstack works with user-defined dtypes.
+    Regression test for https://github.com/astropy/astropy/issues/19199
+    """
+    StringDType = getattr(np.dtypes, "StringDType", None)
+    if StringDType is None:
+        pytest.skip("requires numpy with StringDType")
+    dt = StringDType()
+    t = table.Table([np.array(["a", "b"], dtype=dt)], names=["c"])
+    t2 = table.vstack([t, t])
+    assert len(t2) == 4
+    assert t2["c"].dtype == dt
+
+
 def test_join_mixins_time_quantity():
     """
     Test for table join using non-ndarray key columns.

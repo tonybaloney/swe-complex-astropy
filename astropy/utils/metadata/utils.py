@@ -3,8 +3,6 @@
 
 import numpy as np
 
-from astropy.utils.misc import dtype_bytes_or_chars
-
 from .exceptions import MergeConflictError
 
 __all__ = ["common_dtype"]
@@ -28,8 +26,8 @@ def common_dtype(arrs):
 
     Returns
     -------
-    dtype_str : str
-        String representation of dytpe (dtype ``str`` attribute)
+    dtype : numpy dtype
+        Common dtype of the input arrays
     """
     np_types = (np.bool_, np.object_, np.number, np.character, np.void)
     uniq_types = {
@@ -43,20 +41,4 @@ def common_dtype(arrs):
         tme._incompat_types = incompat_types
         raise tme
 
-    arrs = [np.empty(1, dtype=dtype(arr)) for arr in arrs]
-
-    # For string-type arrays need to explicitly fill in non-zero
-    # values or the final arr_common = .. step is unpredictable.
-    for i, arr in enumerate(arrs):
-        if arr.dtype.kind in ("S", "U"):
-            arrs[i] = [
-                ("0" if arr.dtype.kind == "U" else b"0")
-                * dtype_bytes_or_chars(arr.dtype)
-            ]
-
-    arr_common = np.array([arr[0] for arr in arrs])
-    return (
-        arr_common.dtype.str
-        if arr_common.dtype.names is None
-        else arr_common.dtype.descr
-    )
+    return np.result_type(*[dtype(arr) for arr in arrs])
