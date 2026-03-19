@@ -7,6 +7,7 @@ from astropy.table import Column, MaskedColumn, QTable, Table
 from astropy.table.table_helpers import simple_table
 from astropy.time import Time
 from astropy.units import Quantity, deg
+from astropy.utils.masked import Masked
 
 
 def test_pickle_column(protocol):
@@ -155,3 +156,24 @@ def test_pickle_indexed_table(protocol):
     for index, indexp in zip(t.indices, tp.indices):
         assert np.all(index.data.data == indexp.data.data)
         assert index.data.data.colnames == indexp.data.data.colnames
+
+
+def test_pickle_qtable_masked_quantity(protocol):
+    """Regression test for https://github.com/astropy/astropy/issues/19142
+
+    Ensure that a QTable with masked quantity columns can be pickled.
+    """
+    a = Masked(np.arange(3) * deg, mask=[True, False, False])
+    b = Masked(np.arange(3.0) * Quantity(1, "m"), mask=[False, True, False])
+
+    t = QTable([a, b], names=["a", "b"])
+
+    ts = pickle.dumps(t)
+    tp = pickle.loads(ts)
+
+    assert tp.__class__ is QTable
+    for colname in ("a", "b"):
+        assert type(tp[colname]) is type(t[colname])
+        assert np.all(tp[colname].unmasked == t[colname].unmasked)
+        assert np.all(tp[colname].mask == t[colname].mask)
+    assert tp.colnames == t.colnames
