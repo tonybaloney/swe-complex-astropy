@@ -119,7 +119,92 @@ class TestMultiD:
         ]
 
 
-def test_html_escaping():
+class TestMaxPrintVector:
+    """Test the max_print_vector configuration option for multidimensional columns."""
+
+    def test_default_shows_first_last(self):
+        """Default max_print_vector=2 shows only first and last elements."""
+        arr = np.array([[1, 2, 3], [10, 20, 30]], dtype=np.int64)
+        t = Table([arr], names=["col0"])
+        lines = t.pformat()
+        assert lines == [
+            "  col0  ",
+            "--------",
+            "  1 .. 3",
+            "10 .. 30",
+        ]
+
+    def test_show_all_three_vector_elements(self):
+        """Setting max_print_vector=3 shows all elements for 3-vectors."""
+        arr = np.array([[1, 2, 3], [10, 20, 30]], dtype=np.int64)
+        t = Table([arr], names=["col0"])
+        with table.conf.set_temp("max_print_vector", 3):
+            lines = t.pformat()
+        assert lines == [
+            "     col0     ",
+            "--------------",
+            "   1 .. 2 .. 3",
+            "10 .. 20 .. 30",
+        ]
+
+    def test_show_all_with_large_threshold(self):
+        """Setting max_print_vector to large value shows all elements."""
+        arr = np.array([[1, 2, 3, 4, 5], [10, 20, 30, 40, 50]], dtype=np.int64)
+        t = Table([arr], names=["col0"])
+        with table.conf.set_temp("max_print_vector", 10000):
+            lines = t.pformat()
+        assert lines == [
+            "           col0           ",
+            "--------------------------",
+            "     1 .. 2 .. 3 .. 4 .. 5",
+            "10 .. 20 .. 30 .. 40 .. 50",
+        ]
+
+    def test_two_element_vector_unchanged(self):
+        """2-element vectors display the same regardless of threshold."""
+        arr = np.array([[1, 2], [10, 20]], dtype=np.int64)
+        t = Table([arr], names=["col0"])
+        # Default threshold=2
+        lines_default = t.pformat()
+        # Higher threshold should produce the same result for 2-element vectors
+        with table.conf.set_temp("max_print_vector", 10):
+            lines_high = t.pformat()
+        assert lines_default == lines_high
+
+    def test_multidim_2d_vector(self):
+        """Test with 2D vector elements (e.g., shape (n, 2, 3))."""
+        arr = np.arange(12, dtype=np.int64).reshape(2, 2, 3)
+        t = Table([arr], names=["col0"])
+        # Default: show first [0,0] and last [1,2] elements
+        lines = t.pformat()
+        assert "0 .. 5" in lines[2]
+        assert "6 .. 11" in lines[3]
+        # With threshold=6 (2*3), show all elements
+        with table.conf.set_temp("max_print_vector", 6):
+            lines = t.pformat()
+        assert "0 .. 1 .. 2 .. 3 .. 4 .. 5" in lines[2]
+        assert "6 .. 7 .. 8 .. 9 .. 10 .. 11" in lines[3]
+
+    def test_html_output_with_max_print_vector(self):
+        """Test that HTML output also respects max_print_vector."""
+        arr = np.array([[1, 2, 3], [10, 20, 30]], dtype=np.int64)
+        t = Table([arr], names=["col0"])
+        with table.conf.set_temp("max_print_vector", 3):
+            lines = t.pformat(html=True)
+        assert "<td>1 .. 2 .. 3</td>" in lines[2]
+        assert "<td>10 .. 20 .. 30</td>" in lines[3]
+
+    def test_fake_multidim_unaffected(self):
+        """Columns with shape (n,1,...,1) are unaffected by max_print_vector."""
+        arr = np.array([[(1,)], [(10,)]], dtype=np.int64)
+        t = Table([arr], names=["col0"])
+        with table.conf.set_temp("max_print_vector", 10):
+            lines = t.pformat()
+        # Should show single values, not "1 .. 1"
+        assert " 1" in lines[2]
+        assert "10" in lines[3]
+        assert ".." not in lines[2]
+        assert ".." not in lines[3]
     t = table.Table([('<script>alert("gotcha");</script>', 2, 3)])
     nbclass = table.conf.default_notebook_table_class
     assert t._repr_html_().splitlines() == [

@@ -76,6 +76,15 @@ class Conf(_config.ConfigNamespace):
         "This configuration option will be deprecated and then removed in "
         "subsequent major releases.",
     )
+    max_print_vector = _config.ConfigItem(
+        2,
+        "Maximum number of vector elements to show in a table cell before "
+        "summarizing to the first and last element with '..'. When the total "
+        "number of elements in a vector column cell is less than or equal to "
+        "this value, all elements are shown. Set to a large value like 10000 "
+        "to always show all elements.",
+        cfgtype="integer",
+    )
 
 
 conf = Conf()

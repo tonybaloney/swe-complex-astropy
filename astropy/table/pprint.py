@@ -431,6 +431,11 @@ class TableFormatter:
             multidim1 = tuple(n - 1 for n in multidims)
             multidims_all_ones = np.prod(multidims) == 1
             multidims_has_zero = 0 in multidims
+            from astropy.table import conf as table_conf
+
+            show_all_multidim_elements = (
+                np.prod(multidims) <= table_conf.max_print_vector
+            )
 
         i_dashes = None
         i_centers = []  # Line indexes where content should be centered
@@ -528,9 +533,16 @@ class TableFormatter:
                     # Any zero dimension means there is no data to print
                     return ""
                 else:
-                    left = format_func(col_format, col[(idx,) + multidim0])
-                    right = format_func(col_format, col[(idx,) + multidim1])
-                    return f"{left} .. {right}"
+                    if show_all_multidim_elements:
+                        elements = [
+                            format_func(col_format, col[(idx,) + mi])
+                            for mi in np.ndindex(multidims)
+                        ]
+                        return " .. ".join(elements)
+                    else:
+                        left = format_func(col_format, col[(idx,) + multidim0])
+                        right = format_func(col_format, col[(idx,) + multidim1])
+                        return f"{left} .. {right}"
             elif is_scalar:
                 return format_func(col_format, col)
             else:
