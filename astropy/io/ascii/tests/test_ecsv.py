@@ -1305,3 +1305,24 @@ def test_compressed_files(tmp_path, format_engine, compressed_filename):
     # Open compressed file and compare to ensure it's read correctly
     t_comp = Table.read(compressed_filename, **format_engine)
     assert_array_equal(t, t_comp)
+
+
+def test_read_meta_without_omap():
+    """Regression test: ECSV meta without !!omap tag should still be readable.
+
+    See https://github.com/astropy/astropy/issues/5523
+    """
+    txt = """\
+# %ECSV 0.9
+# ---
+# meta:
+# - keyword:
+#    this_is: a_test
+# datatype:
+# - name: fake
+#   datatype: string
+fake
+0"""
+    t = ascii.read(txt, format="ecsv")
+    assert t.meta == {"keyword": {"this_is": "a_test"}}
+    assert t["fake"][0] == "0"

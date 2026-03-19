@@ -418,4 +418,9 @@ def get_header_from_yaml(lines):
     except Exception as err:
         raise YamlParseError() from err
 
+    # Convert meta list of single-key dicts (YAML sequence without !!omap)
+    # to a flat dict so it can be used as table meta.
+    if isinstance(header.get("meta"), list):
+        header["meta"] = {k: v for item in header["meta"] for k, v in item.items()}
+
     return header
