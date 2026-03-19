@@ -9,6 +9,8 @@ Before integration into Astropy it was known as
 (INAF - Istituto Nazionale di Astrofisica).
 """
 
+import defusedxml.xmlrpc
+
 from astropy import config as _config
 
 from .client import *
@@ -18,6 +20,8 @@ from .hub import *
 from .hub_proxy import *
 from .integrated_client import *
 from .utils import *
+
+defusedxml.xmlrpc.monkey_patch()
 
 
 class Conf(_config.ConfigNamespace):
