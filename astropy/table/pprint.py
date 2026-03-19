@@ -9,6 +9,7 @@ from shutil import get_terminal_size
 import numpy as np
 
 from astropy import log
+from astropy.table import conf as table_conf
 from astropy.utils.console import Getch, color_print, conf
 from astropy.utils.data_info import dtype_info_name
 
@@ -46,6 +47,13 @@ def _possible_string_format_functions(format_):
     yield lambda format_, val: format_.format(val)
     yield lambda format_, val: format_ % val
     yield lambda format_, val: format_.format(**{k: val[k] for k in val.dtype.names})
+
+
+def _pformat_multidim_values(format_func, col_format, values, threshold):
+    values = np.asanyarray(values).ravel()
+    if len(values) <= threshold:
+        return " ".join(format_func(col_format, value) for value in values)
+    return f"{format_func(col_format, values[0])} .. {format_func(col_format, values[-1])}"
 
 
 def get_auto_format_func(
@@ -528,9 +536,12 @@ class TableFormatter:
                     # Any zero dimension means there is no data to print
                     return ""
                 else:
-                    left = format_func(col_format, col[(idx,) + multidim0])
-                    right = format_func(col_format, col[(idx,) + multidim1])
-                    return f"{left} .. {right}"
+                    return _pformat_multidim_values(
+                        format_func,
+                        col_format,
+                        col[idx],
+                        table_conf.multidim_str_threshold,
+                    )
             elif is_scalar:
                 return format_func(col_format, col)
             else:

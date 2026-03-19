@@ -76,6 +76,12 @@ class Conf(_config.ConfigNamespace):
         "This configuration option will be deprecated and then removed in "
         "subsequent major releases.",
     )
+    multidim_str_threshold = _config.ConfigItem(
+        2,
+        "Maximum number of elements to show when formatting each row value of a "
+        "multidimensional table column. If the number of elements exceeds this "
+        "threshold, only the first and last elements are shown.",
+    )
 
 
 conf = Conf()

@@ -69,6 +69,14 @@ class TestMultiD:
             "   5 .. 60",
         ]
 
+    def test_multidim_threshold(self, table_type):
+        t = table_type([np.arange(6).reshape(2, 3)], names=["a"])
+
+        assert t.pformat() == ["  a   ", "------", "0 .. 2", "3 .. 5"]
+
+        with table.conf.set_temp("multidim_str_threshold", 3):
+            assert t.pformat() == ["  a  ", "-----", "0 1 2", "3 4 5"]
+
     def test_fake_multidim(self, table_type):
         """Test printing with 'fake' multidimensional column"""
         arr = [
@@ -469,6 +477,13 @@ class TestFormat:
             "30.0 .. 60.0",
         ]
         assert str(t["a"]).splitlines() == outstr
+
+        with table.conf.set_temp("multidim_str_threshold", 4):
+            assert str(t["a"]).splitlines() == [
+                "        a        ",
+                "-----------------",
+                "3.0 6.0 30.0 60.0",
+            ]
 
     def test_column_format_func_not_str(self, table_type):
         t = table_type([[1.0, 2.0], [3, 4]], names=("a", "b"))
