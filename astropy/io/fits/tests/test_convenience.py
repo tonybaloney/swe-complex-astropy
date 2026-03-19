@@ -500,6 +500,25 @@ class TestConvenience(FitsTestCase):
         ):
             fits.getdata(buf)
 
+    def test_getdata_lower_upper(self, tmp_path):
+        t = Table([np.zeros(5), np.ones(5), np.arange(5)], names=["a", "b", "c"])
+        t.write(tmp_path / "lower.fits")
+        t = Table([np.zeros(5), np.ones(5), np.arange(5)], names=["A", "B", "C"])
+        t.write(tmp_path / "upper.fits")
+
+        ref = np.zeros(5)
+        lowup = fits.getdata(tmp_path / "lower.fits", 1, upper=True)
+        assert lowup.dtype.names == ("A", "B", "C")
+        assert_array_equal(lowup["A"], ref)
+        assert_array_equal(lowup["a"], ref)
+        assert_array_equal(lowup.A, ref)
+
+        uplow = fits.getdata(tmp_path / "upper.fits", 1, lower=True)
+        assert uplow.dtype.names == ("a", "b", "c")
+        assert_array_equal(uplow["A"], ref)
+        assert_array_equal(uplow["a"], ref)
+        assert_array_equal(uplow.a, ref)
+
     def test_getdata_ext_not_given_nodata_noext(self):
         # tests exception raised when there is no data in the
         # Primary HDU and there are no extension HDUs
