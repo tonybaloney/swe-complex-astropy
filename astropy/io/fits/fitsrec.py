@@ -1204,7 +1204,7 @@ class FITS_rec(np.recarray):
                 if isinstance(self._coldefs, _AsciiColDefs):
                     self._scale_back_ascii(index, dummy, raw_field)
                 # binary table string column
-                elif isinstance(raw_field, chararray.chararray):
+                elif raw_field.dtype.kind in "SU":
                     self._scale_back_strings(index, dummy, raw_field)
                 # all other binary table columns
                 else:

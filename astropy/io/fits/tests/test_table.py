@@ -80,11 +80,9 @@ def comparerecords(a, b):
             fielda = decode_ascii(fielda)
         if fieldb.dtype.char == "S":
             fieldb = decode_ascii(fieldb)
-        if not isinstance(fielda, type(fieldb)) and not isinstance(
-            fieldb, type(fielda)
-        ):
-            print("type(fielda): ", type(fielda), " fielda: ", fielda)
-            print("type(fieldb): ", type(fieldb), " fieldb: ", fieldb)
+        if fielda.dtype != fieldb.dtype:
+            print("fielda.dtype: ", fielda.dtype, " fielda: ", fielda)
+            print("fieldb.dtype: ", fieldb.dtype, " fieldb: ", fieldb)
             print(f"field {i} type differs")
             return False
         if len(fielda) and isinstance(fielda[0], np.floating):
@@ -234,6 +232,9 @@ class TestTableFunctions(FitsTestCase):
             exp = [True, True, False, True, False, True, True, True, False, False, True]
             temp = f2[1].data.field(7)
             assert (temp[0] == exp).all()
+
+        assert isinstance(tbhdu.data.field("abc"), np.ndarray)
+        assert tbhdu.data.field("abc").dtype.kind in "SU"
 
         # An alternative way to create an output table FITS file:
         fout2 = fits.open(self.temp("tableout2.fits"), "append")
