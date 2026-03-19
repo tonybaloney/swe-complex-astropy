@@ -4230,7 +4230,7 @@ class Table:
         ImportError
             If pandas is not installed
         ValueError
-            If the Table has multi-dimensional columns or if index argument is invalid
+            If the index argument is invalid
 
         Examples
         --------
