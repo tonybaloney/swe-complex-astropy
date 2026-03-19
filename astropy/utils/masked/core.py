@@ -267,9 +267,10 @@ class Masked(NDArrayShapeMethods):
             masked_cls = type(
                 "Masked" + data_cls.__name__,
                 (data_cls, base_cls),
-                {},
+                {"__module__": __name__},
                 data_cls=data_cls,
             )
+            globals()[masked_cls.__name__] = masked_cls
 
         return masked_cls
 
@@ -621,8 +622,9 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
             new_info = type(
                 cls.__name__ + "Info",
                 (MaskedArraySubclassInfo, data_info.__class__),
-                dict(attr_names=attr_names),
+                dict(__module__=__name__, attr_names=attr_names),
             )
+            globals()[new_info.__name__] = new_info
             cls.info = new_info()
 
     # The two pieces typically overridden.

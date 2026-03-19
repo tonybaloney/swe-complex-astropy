@@ -5,6 +5,7 @@ Functions, including ufuncs, are tested in test_functions.py
 """
 
 import operator
+import pickle
 import sys
 
 import numpy as np
@@ -13,6 +14,7 @@ from numpy.testing import assert_array_equal
 
 from astropy import units as u
 from astropy.coordinates import Longitude
+from astropy.table import QTable
 from astropy.units import Quantity
 from astropy.utils.compat import NUMPY_LT_2_0, NUMPY_LT_2_2, NUMPY_LT_2_3
 from astropy.utils.compat.optional_deps import HAS_PLT
@@ -340,6 +342,27 @@ class TestMaskedQuantityInitialization(TestMaskedArrayInitialization, QuantitySe
         assert np.all(mq.value.unmasked == [1.0, 2.0])
         assert np.all(mq.value.mask == [True, False])
         assert np.all(mq.mask == [True, False])
+
+    @pytest.mark.parametrize("name", ["MaskedQuantityInfo", "MaskedLongitudeInfo"])
+    def test_masked_info_class_importable(self, name):
+        assert getattr(sys.modules["astropy.utils.masked.core"], name).__name__ == name
+
+    def test_masked_quantity_pickle_with_info(self):
+        mq = self.MQ([1.0, 2.0], mask=[True, False], unit=u.s)
+        mq.info.description = "test"
+        roundtrip = pickle.loads(pickle.dumps(mq))
+        assert np.all(roundtrip == mq)
+        assert np.all(roundtrip.mask == mq.mask)
+        assert roundtrip.info.description == "test"
+
+    def test_masked_qtable_pickle_with_info(self):
+        mq = self.MQ([1.0, 2.0], mask=[True, False], unit=u.s)
+        mq.info.description = "test"
+        table = QTable([mq], names=["col"])
+        roundtrip = pickle.loads(pickle.dumps(table))
+        assert np.all(roundtrip["col"] == table["col"])
+        assert np.all(roundtrip["col"].mask == table["col"].mask)
+        assert roundtrip["col"].info.description == "test"
 
     def test_initialization_without_mask(self):
         # Default for not giving a mask should be False.
