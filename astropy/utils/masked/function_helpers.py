@@ -15,7 +15,7 @@ import warnings
 import numpy as np
 
 from astropy.units.quantity_helper.function_helpers import FunctionAssigner
-from astropy.utils.compat import NUMPY_LT_2_0, NUMPY_LT_2_1, NUMPY_LT_2_2, NUMPY_LT_2_4
+from astropy.utils.compat import NUMPY_LT_2_0, NUMPY_LT_2_1, NUMPY_LT_2_2, NUMPY_LT_2_4, NUMPY_LT_2_5
 
 if NUMPY_LT_2_0:
     import numpy.core as np_core
@@ -1563,7 +1563,10 @@ if NUMPY_LT_2_4:
 def isin(element, test_elements, assume_unique=False, invert=False, *, kind=None):
     element = np.asanyarray(element)
     result = _in1d(element, test_elements, assume_unique, invert, kind=kind)
-    result.shape = element.shape
+    if NUMPY_LT_2_5:
+        result.shape = element.shape
+    else:
+        result._set_shape(element.shape)
     return result, _copy_of_mask(element), None
 
 
