@@ -721,3 +721,24 @@ def test_propagation_of_mask():
     y = np.ma.masked_where(x > 1, x)
 
     assert_allclose(sigma_clipped_stats(y, grow=1), (1, 1, 0))
+
+
+def test_sigmaclip_pickle():
+    """Test that SigmaClip objects can be pickled and unpickled.
+
+    Regression test for https://github.com/astropy/astropy/issues/19372
+    """
+    import pickle
+
+    sigclip = SigmaClip(sigma=3.0, maxiters=5)
+    sigclip2 = pickle.loads(pickle.dumps(sigclip))
+    assert sigclip2.sigma == sigclip.sigma
+    assert sigclip2.maxiters == sigclip.maxiters
+    assert sigclip2.cenfunc == sigclip.cenfunc
+    assert sigclip2.stdfunc == sigclip.stdfunc
+
+    # Verify the unpickled object works correctly
+    data = np.array([1.0, 2.0, 3.0, 100.0, 4.0, 5.0])
+    result_orig = sigclip(data)
+    result_unpickled = sigclip2(data)
+    assert_equal(result_orig.data, result_unpickled.data)

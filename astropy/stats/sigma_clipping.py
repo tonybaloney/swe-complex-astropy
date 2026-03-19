@@ -191,6 +191,20 @@ class SigmaClip:
 
             self._binary_dilation = binary_dilation
 
+    def __getstate__(self) -> dict:
+        # Exclude _cenfunc_parsed and _stdfunc_parsed from the pickle state
+        # because they may be local functions (from _dtype_dispatch) that
+        # cannot be pickled. They will be reconstructed in __setstate__.
+        state = self.__dict__.copy()
+        state.pop("_cenfunc_parsed", None)
+        state.pop("_stdfunc_parsed", None)
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        self.__dict__.update(state)
+        self._cenfunc_parsed = self._parse_cenfunc(self.cenfunc)
+        self._stdfunc_parsed = self._parse_stdfunc(self.stdfunc)
+
     def __repr__(self) -> str:
         return (
             f"SigmaClip(sigma={self.sigma}, sigma_lower={self.sigma_lower},"
