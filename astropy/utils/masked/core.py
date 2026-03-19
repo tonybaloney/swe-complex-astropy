@@ -623,6 +623,9 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
                 (MaskedArraySubclassInfo, data_info.__class__),
                 dict(attr_names=attr_names),
             )
+            # Ensure the info class is picklable by setting __module__ to
+            # a module whose __getattr__ can resolve it dynamically.
+            new_info.__module__ = __name__
             cls.info = new_info()
 
     # The two pieces typically overridden.
@@ -1430,7 +1433,7 @@ class MaskedRecarray(np.recarray, MaskedNDArray, data_cls=np.recarray):
 
 
 def __getattr__(key):
-    """Make commonly used Masked subclasses importable for ASDF support.
+    """Make commonly used Masked subclasses and their info classes importable.
 
     Registered types associated with ASDF converters must be importable by
     their fully qualified name. Masked classes are dynamically created and have
@@ -1438,16 +1441,23 @@ def __getattr__(key):
     they aren't actually attributes of this module. Customize module attribute
     lookup so that certain commonly used Masked classes are importable.
 
+    This also handles dynamically created info classes (e.g.,
+    ``MaskedQuantityInfo``) so that they can be pickled and unpickled.
+
     See:
     - https://asdf.readthedocs.io/en/latest/asdf/extending/converters.html#entry-point-performance-considerations
     - https://github.com/astropy/asdf-astropy/pull/253
     """
     if key.startswith(Masked.__name__):
+        # Check if this is an info class lookup (e.g., "MaskedQuantityInfo")
+        # and strip the "Info" suffix to find the base class name.
+        is_info = key.endswith("Info")
+        base_class_name = key[len(Masked.__name__) : -4 if is_info else None]
+
         # TODO: avoid using a private attribute from table.
         # Can we make this more beautiful?
         from astropy.table.serialize import __construct_mixin_classes
 
-        base_class_name = key[len(Masked.__name__) :]
         for base_class_qualname in __construct_mixin_classes:
             module, _, name = base_class_qualname.rpartition(".")
             if name == base_class_name:
@@ -1457,6 +1467,9 @@ def __getattr__(key):
                 # But only return it if it is a standard one, not one
                 # where we just used the ndarray fallback.
                 if base_class in Masked._masked_classes:
-                    return masked_class
+                    if is_info and "info" in masked_class.__dict__:
+                        return type(masked_class.__dict__["info"])
+                    elif not is_info:
+                        return masked_class
 
     raise AttributeError(f"module '{__name__}' has no attribute '{key}'")
