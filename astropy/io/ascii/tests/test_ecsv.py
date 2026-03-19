@@ -415,6 +415,49 @@ def test_regression_5604():
     assert "!astropy.units.Quantity" in out.getvalue()
 
 
+def test_ecsv_meta_without_omap():
+    """
+    Regression test for reading ECSV with ``meta`` that is not tagged as
+    ``!!omap``.  Without the fix the YAML ``meta`` is parsed as a list of
+    dicts instead of a mapping and downstream code crashes with
+    ``ValueError: dictionary update sequence element #0 has length 1; 2 is required``.
+
+    See https://github.com/astropy/astropy/issues/19313 for more.
+    """
+    # meta without !!omap tag
+    ecsv_content = """\
+# %ECSV 0.9
+# ---
+# meta:
+# - keyword:
+#    this_is: a_test
+# datatype:
+# - name: fake
+#   datatype: string
+fake
+0
+"""
+    t = ascii.read(ecsv_content, format="ecsv")
+    assert t["fake"][0] == "0"
+    assert t.meta["keyword"] == {"this_is": "a_test"}
+
+    # Same content with !!omap should give identical meta
+    ecsv_content_omap = """\
+# %ECSV 0.9
+# ---
+# meta: !!omap
+# - keyword:
+#    this_is: a_test
+# datatype:
+# - name: fake
+#   datatype: string
+fake
+0
+"""
+    t2 = ascii.read(ecsv_content_omap, format="ecsv")
+    assert t.meta == t2.meta
+
+
 def assert_objects_equal(obj1, obj2, attrs, compare_class=True):
     if compare_class:
         assert obj1.__class__ is obj2.__class__

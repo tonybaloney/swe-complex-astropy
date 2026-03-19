@@ -96,6 +96,7 @@ def _construct_odict(load, node):
         omap[key] = value
 
 
+
 def _repr_pairs(dump, tag, sequence, flow_style=None):
     """
     This is the same code as BaseRepresenter.represent_sequence(),
@@ -417,5 +418,11 @@ def get_header_from_yaml(lines):
         header = yaml.load(header_yaml, Loader=TableLoader)
     except Exception as err:
         raise YamlParseError() from err
+
+    # If "meta" was written without the !!omap tag, YAML parses it as a list
+    # of single-key dicts instead of a mapping.  Merge into a plain dict so
+    # downstream code (e.g. dict.update()) works.
+    if isinstance(header.get("meta"), list):
+        header["meta"] = {k: v for d in header["meta"] for k, v in d.items()}
 
     return header
