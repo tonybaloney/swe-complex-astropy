@@ -500,6 +500,29 @@ class TestConvenience(FitsTestCase):
         ):
             fits.getdata(buf)
 
+    def test_getdata_lower_upper_no_fields(self):
+        # Regression test: getdata with lower/upper on data without
+        # named fields should return the data, not None.
+        data = np.arange(10)
+        prihdu = fits.PrimaryHDU(data=data)
+        hdulist = fits.HDUList([prihdu])
+        buf = io.BytesIO()
+        hdulist.writeto(buf)
+        buf.seek(0)
+
+        result = fits.getdata(buf, lower=True)
+        assert_array_equal(result, data)
+
+        buf.seek(0)
+        result = fits.getdata(buf, upper=True)
+        assert_array_equal(result, data)
+
+        # Also check that header=True returns a tuple, not None.
+        buf.seek(0)
+        result, hdr = fits.getdata(buf, header=True, lower=True)
+        assert_array_equal(result, data)
+        assert isinstance(hdr, fits.Header)
+
     def test_getdata_ext_not_given_nodata_noext(self):
         # tests exception raised when there is no data in the
         # Primary HDU and there are no extension HDUs
