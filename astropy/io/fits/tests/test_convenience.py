@@ -513,3 +513,17 @@ class TestConvenience(FitsTestCase):
             IndexError, match="No data in Primary HDU and no extension HDU found."
         ):
             fits.getdata(buf)
+
+    def test_getdata_lower_upper_without_fields(self):
+        image = np.arange(4).reshape(2, 2)
+        buf = io.BytesIO()
+        fits.PrimaryHDU(data=image).writeto(buf)
+
+        buf.seek(0)
+        lower = fits.getdata(buf, lower=True)
+        np.testing.assert_array_equal(lower, image)
+
+        buf.seek(0)
+        upper, header = fits.getdata(buf, upper=True, header=True)
+        np.testing.assert_array_equal(upper, image)
+        assert header["NAXIS"] == 2
