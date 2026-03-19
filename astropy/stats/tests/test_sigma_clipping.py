@@ -721,3 +721,31 @@ def test_propagation_of_mask():
     y = np.ma.masked_where(x > 1, x)
 
     assert_allclose(sigma_clipped_stats(y, grow=1), (1, 1, 0))
+
+
+@pytest.mark.parametrize("cenfunc", ["median", "mean"])
+@pytest.mark.parametrize("stdfunc", ["std", "mad_std"])
+def test_sigmaclip_pickle(cenfunc, stdfunc):
+    """Test that SigmaClip objects can be pickled and unpickled.
+
+    Regression test for https://github.com/astropy/astropy/issues/19372
+    """
+    import pickle
+
+    sigclip = SigmaClip(sigma=3.0, sigma_lower=2.5, sigma_upper=4.0,
+                        maxiters=5, cenfunc=cenfunc, stdfunc=stdfunc)
+    roundtripped = pickle.loads(pickle.dumps(sigclip))
+
+    assert roundtripped.sigma == sigclip.sigma
+    assert roundtripped.sigma_lower == sigclip.sigma_lower
+    assert roundtripped.sigma_upper == sigclip.sigma_upper
+    assert roundtripped.maxiters == sigclip.maxiters
+    assert roundtripped.cenfunc == sigclip.cenfunc
+    assert roundtripped.stdfunc == sigclip.stdfunc
+    assert roundtripped.grow == sigclip.grow
+
+    # Verify the unpickled object still works
+    with NumpyRNGContext(12345):
+        data = np.random.randn(100)
+    data[0] = 100
+    assert_equal(sigclip(data, masked=False), roundtripped(data, masked=False))

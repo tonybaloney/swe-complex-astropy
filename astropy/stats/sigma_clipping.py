@@ -191,6 +191,20 @@ class SigmaClip:
 
             self._binary_dilation = binary_dilation
 
+    def __reduce__(self):
+        return (
+            type(self),
+            (
+                self.sigma,
+                self.sigma_lower,
+                self.sigma_upper,
+                self.maxiters,
+                self.cenfunc,
+                self.stdfunc,
+                self.grow,
+            ),
+        )
+
     def __repr__(self) -> str:
         return (
             f"SigmaClip(sigma={self.sigma}, sigma_lower={self.sigma_lower},"
