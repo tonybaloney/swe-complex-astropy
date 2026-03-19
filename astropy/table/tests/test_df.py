@@ -664,6 +664,14 @@ class TestDataFrameConversion:
         assert val == 2
         assert nulls_first_two.all()
 
+    @pytest.mark.skipif(not HAS_PANDAS, reason="requires pandas")
+    def test_multidimensional_to_pandas(self):
+        df = table.Table({"a": ["foo", "bar"], "b": [[1, 2], [3, 4]]}).to_pandas()
+
+        assert df["b"].dtype == object
+        assert_array_equal(df["b"].iloc[0], np.array([1, 2]))
+        assert_array_equal(df["b"].iloc[1], np.array([3, 4]))
+
 
 @pytest.mark.skipif(
     not HAS_PANDAS or not HAS_NARWHALS,

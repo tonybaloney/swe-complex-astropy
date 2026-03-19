@@ -109,20 +109,15 @@ def _validate_columns_for_backend(
 
     Raises ValueError if there is a multidimensional column with an unsupported backend.
     """
-    # Check for multidimensional columns
     badcols = [name for name, col in table.columns.items() if len(col.shape) > 1]
 
     if not badcols:
         return
 
-    # Check if pandas-like or pyarrow-like
-    if _is_pandas_like(backend_impl) or (
-        not isinstance(backend_impl, str)
-        and getattr(backend_impl, "is_pyarrow", lambda: False)()
-    ):
+    if not isinstance(backend_impl, str) and getattr(backend_impl, "is_pyarrow", lambda: False)():
         raise ValueError(
             f"Cannot convert a table with multidimensional columns to a "
-            f"pandas-like or pyarrow DataFrame. Offending columns are: {badcols}\n"
+            f"pyarrow DataFrame. Offending columns are: {badcols}\n"
             f"One can filter out such columns using:\n"
             f"names = [name for name in tbl.colnames if len(tbl[name].shape) <= 1]\n"
             f"tbl[names].to_pandas(...)"
@@ -384,11 +379,14 @@ def to_pandas(
 
     # Encode mixins and validate columns
     tbl = _encode_mixins(table)
-    _validate_columns_for_backend(tbl, backend_impl=PANDAS_LIKE)  # pandas validation
 
     out = {}
 
     for name, column in tbl.columns.items():
+        if len(column.shape) > 1:
+            out[name] = Series(np.array(column.tolist(), dtype=object), dtype=object)
+            continue
+
         if getattr(column.dtype, "isnative", True):
             out[name] = column
         else:
