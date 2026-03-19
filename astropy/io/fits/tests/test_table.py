@@ -2232,8 +2232,8 @@ class TestTableFunctions(FitsTestCase):
         with fits.open(self.temp("test.fits")) as h:
             # Need to force string arrays to byte arrays in order to compare
             # correctly on Python 3
-            assert (h[1].data["str"].encode("ascii") == arra).all()
-            assert (h[1].data["strarray"].encode("ascii") == arrb).all()
+            assert (np.char.encode(h[1].data["str"], "ascii") == arra).all()
+            assert (np.char.encode(h[1].data["strarray"], "ascii") == arrb).all()
             assert (h[1].data["intarray"] == arrc).all()
 
     def test_mismatched_tform_and_tdim(self):

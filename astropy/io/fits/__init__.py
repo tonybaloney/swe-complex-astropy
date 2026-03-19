@@ -76,6 +76,7 @@ from .card import *
 from .column import *
 from .convenience import *
 from .diff import *
+from .chararray import CharacterArray
 from .fitsrec import FITS_rec, FITS_record
 from .hdu import *
 from .hdu.compressed import CompImageSection

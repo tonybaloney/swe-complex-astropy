@@ -11,6 +11,7 @@ import numpy as np
 from numpy import char as chararray
 
 from astropy.utils import lazyproperty
+from astropy.utils.exceptions import AstropyDeprecationWarning
 
 from .column import (
     _VLF,
@@ -29,6 +30,8 @@ from .column import (
     _wrapx,
 )
 from .util import _rstrip_inplace, decode_ascii, encode_ascii
+
+from .chararray import CharacterArray
 
 
 class FITS_record:
@@ -1204,7 +1207,7 @@ class FITS_rec(np.recarray):
                 if isinstance(self._coldefs, _AsciiColDefs):
                     self._scale_back_ascii(index, dummy, raw_field)
                 # binary table string column
-                elif isinstance(raw_field, chararray.chararray):
+                elif isinstance(raw_field, (chararray.chararray, CharacterArray)):
                     self._scale_back_strings(index, dummy, raw_field)
                 # all other binary table columns
                 else:
@@ -1341,7 +1344,7 @@ class FITS_rec(np.recarray):
 
         # Replace exponent separator in floating point numbers
         if "D" in format:
-            output_field[:] = output_field.replace(b"E", b"D")
+            output_field[:] = np.char.replace(output_field, b"E", b"D")
 
     def tolist(self):
         # Override .tolist to take care of special case of VLF
@@ -1355,14 +1358,16 @@ def _get_recarray_field(array, key):
     """
     Compatibility function for using the recarray base class's field method.
     This incorporates the legacy functionality of returning string arrays as
-    Numeric-style chararray objects.
+    character array objects with automatic trailing whitespace truncation.
     """
+    from .chararray import CharacterArray
+
     # Numpy >= 1.10.dev recarray no longer returns chararrays for strings
     # This is currently needed for backwards-compatibility and for
     # automatic truncation of trailing whitespace
     field = np.recarray.field(array, key)
-    if field.dtype.char in ("S", "U") and not isinstance(field, chararray.chararray):
-        field = field.view(chararray.chararray)
+    if field.dtype.char in ("S", "U") and not isinstance(field, CharacterArray):
+        field = field.view(CharacterArray)
     return field
 
 
