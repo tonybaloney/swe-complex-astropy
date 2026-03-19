@@ -15,6 +15,7 @@ from hypothesis.extra.numpy import basic_indices
 from numpy.testing import assert_allclose, assert_equal
 
 from astropy.io import fits
+from astropy.utils.compat.numpycompat import NUMPY_LT_2_5
 from astropy.io.fits.hdu.compressed import (
     COMPRESSION_TYPES,
     DITHER_SEED_CHECKSUM,
@@ -276,7 +277,7 @@ class TestCompressedImage(FitsTestCase):
 
         # Try reshaping the data, then closing and reopening the file; let's
         # see if all the changes are preserved properly
-        hdul[1].data.shape = (42, 10)
+        (hdul[1].data.shape if NUMPY_LT_2_5 else hdul[1].data._set_shape)((42, 10))
         hdul.close()
 
         hdul = fits.open(self.temp("scale.fits"))

@@ -347,7 +347,7 @@ class EcsvOutputter(core.TableOutputter):
                         col_vals.append(arr_val)
 
                     col.shape = ()
-                    col.dtype = np.dtype(object)
+                    col = col.astype(object)
                     # np.array(col_vals_arr, dtype=object) fails ?? so this workaround:
                     col.data = np.empty(len(col_vals), dtype=object)
                     col.data[:] = col_vals

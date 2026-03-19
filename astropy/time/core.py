@@ -30,6 +30,7 @@ from astropy.utils import lazyproperty
 from astropy.utils.data_info import MixinInfo, data_info_factory
 from astropy.utils.decorators import deprecated
 from astropy.utils.exceptions import AstropyDeprecationWarning, AstropyWarning
+from astropy.utils.compat.numpycompat import NUMPY_LT_2_5
 from astropy.utils.masked import (
     MaskableShapedLikeNDArray,
     Masked,
@@ -905,6 +906,12 @@ class TimeBase(MaskableShapedLikeNDArray):
 
     @shape.setter
     def shape(self, shape):
+        def set_shape(value, new_shape):
+            if NUMPY_LT_2_5:
+                value.shape = new_shape
+            else:
+                value._set_shape(new_shape)
+
         del self.cache
 
         # We have to keep track of arrays that were already reshaped,
@@ -927,10 +934,10 @@ class TimeBase(MaskableShapedLikeNDArray):
             val = getattr(obj, attr, None)
             if val is not None and val.size > 1:
                 try:
-                    val.shape = shape
+                    set_shape(val, shape)
                 except Exception:
                     for val2 in reshaped:
-                        val2.shape = oldshape
+                        set_shape(val2, oldshape)
                     raise
                 else:
                     reshaped.append(val)
