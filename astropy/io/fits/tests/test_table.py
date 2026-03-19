@@ -4004,6 +4004,20 @@ def test_one_row_string_column(tmp_path):
     assert table_data.shape[0] == 1
 
 
+def test_multi_dimensional_numeric_column(tmp_path):
+    data = np.arange(24, dtype=np.int16).reshape(3, 2, 4)
+    col = fits.Column(name="FOO", format="8I", dim="(4,2)", array=data)
+    hdul = fits.HDUList([fits.PrimaryHDU(), fits.BinTableHDU.from_columns([col])])
+
+    outfile = tmp_path / "test.fits"
+    hdul.writeto(outfile)
+
+    with fits.open(outfile) as hdul:
+        table_data = hdul[1].data
+    assert table_data["FOO"].shape == data.shape
+    assert np.array_equal(table_data["FOO"], data)
+
+
 def test_zero_row_string_column(tmp_path):
     # issue #18174 writing a zero row BinTableHDU with multidimensional string column
     data = np.zeros((0, 3), dtype="|S8")
