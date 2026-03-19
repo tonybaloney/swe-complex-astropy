@@ -907,33 +907,25 @@ class TimeBase(MaskableShapedLikeNDArray):
     def shape(self, shape):
         del self.cache
 
-        # We have to keep track of arrays that were already reshaped,
-        # since we may have to return those to their original shape if a later
-        # shape-setting fails.
-        reshaped = []
-        oldshape = self.shape
+        attrs = {
+            (obj, attr): val
+            for obj, attr in (
+                (self._time, "jd1"),
+                (self._time, "jd2"),
+                (self, "_delta_ut1_utc"),
+                (self, "_delta_tdb_tt"),
+                (self, "location"),
+            )
+            if (val := getattr(obj, attr, None)) is not None and val.size > 1
+        }
 
-        # In-place reshape of data/attributes.  Need to access _time.jd1/2 not
-        # self.jd1/2 because the latter are not guaranteed to be the actual
-        # data, and in fact should not be directly changeable from the public
-        # API.
-        for obj, attr in (
-            (self._time, "jd1"),
-            (self._time, "jd2"),
-            (self, "_delta_ut1_utc"),
-            (self, "_delta_tdb_tt"),
-            (self, "location"),
-        ):
-            val = getattr(obj, attr, None)
-            if val is not None and val.size > 1:
-                try:
-                    val.shape = shape
-                except Exception:
-                    for val2 in reshaped:
-                        val2.shape = oldshape
-                    raise
-                else:
-                    reshaped.append(val)
+        try:
+            for (obj, attr), val in attrs.items():
+                setattr(obj, attr, np.reshape(val, shape))
+        except Exception:
+            for (obj, attr), val in attrs.items():
+                setattr(obj, attr, val)
+            raise
 
     def _shaped_like_input(self, value):
         if self.masked:
