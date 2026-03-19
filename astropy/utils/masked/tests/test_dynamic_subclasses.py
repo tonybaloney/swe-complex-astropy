@@ -11,3 +11,12 @@ from astropy.utils.masked import core
 @pytest.mark.parametrize("base_class", [Quantity, Angle, Latitude, Longitude])
 def test_importable(base_class):
     assert getattr(core, f"Masked{base_class.__name__}") is core.Masked(base_class)
+
+
+@pytest.mark.parametrize("base_class", [Quantity, Angle, Latitude, Longitude])
+def test_importable_info(base_class):
+    """Regression test for https://github.com/astropy/astropy/issues/19040."""
+    assert (
+        getattr(core, f"Masked{base_class.__name__}Info")
+        is core.Masked(base_class).info.__class__
+    )

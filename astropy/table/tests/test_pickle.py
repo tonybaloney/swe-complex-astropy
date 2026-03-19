@@ -141,6 +141,31 @@ def test_pickle_masked_table(protocol):
     assert tp.meta == t.meta
 
 
+def test_pickle_masked_qtable(protocol):
+    """Regression test for https://github.com/astropy/astropy/issues/18206."""
+    from astropy.coordinates import Angle
+
+    t = QTable(meta={"a": 1}, masked=True)
+    t["a"] = Quantity([1, 2], unit="m")
+    t["b"] = Angle([1, 2], unit=deg)
+
+    t["a"].mask[0] = True
+    t["b"].mask[1] = True
+
+    ts = pickle.dumps(t, protocol=protocol)
+    tp = pickle.loads(ts)
+
+    assert tp.__class__ is QTable
+    assert np.all(tp["a"].mask == t["a"].mask)
+    assert np.all(tp["a"].unmasked == t["a"].unmasked)
+    assert np.all(tp["b"].mask == t["b"].mask)
+    assert np.all(tp["b"].unmasked == t["b"].unmasked)
+    assert type(tp["a"]) is type(t["a"])
+    assert type(tp["b"]) is type(t["b"])
+    assert tp.meta == t.meta
+    assert type(tp) is type(t)
+
+
 def test_pickle_indexed_table(protocol):
     """
     Ensure that any indices that have been added will survive pickling.
