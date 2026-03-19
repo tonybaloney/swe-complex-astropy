@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 import fnmatch
+import itertools
 import os
 import re
 import sys
@@ -429,8 +430,13 @@ class TableFormatter:
         if multidims:
             multidim0 = tuple(0 for n in multidims)
             multidim1 = tuple(n - 1 for n in multidims)
-            multidims_all_ones = np.prod(multidims) == 1
+            n_elements = np.prod(multidims)
+            multidims_all_ones = n_elements == 1
             multidims_has_zero = 0 in multidims
+            max_seq = conf.max_seq_items
+            show_all_items = max_seq < 0 or (
+                max_seq > 0 and n_elements <= max_seq
+            )
 
         i_dashes = None
         i_centers = []  # Line indexes where content should be centered
@@ -527,6 +533,14 @@ class TableFormatter:
                 elif multidims_has_zero:
                     # Any zero dimension means there is no data to print
                     return ""
+                elif show_all_items:
+                    elements = [
+                        format_func(col_format, col[(idx,) + idxs])
+                        for idxs in itertools.product(
+                            *[range(n) for n in multidims]
+                        )
+                    ]
+                    return " .. ".join(elements)
                 else:
                     left = format_func(col_format, col[(idx,) + multidim0])
                     right = format_func(col_format, col[(idx,) + multidim1])

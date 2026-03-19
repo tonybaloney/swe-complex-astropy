@@ -101,6 +101,17 @@ class Conf(_config.ConfigNamespace):
         cfgtype="integer(default=None)",
         aliases=["astropy.table.pprint.max_width"],
     )
+    max_seq_items = _config.ConfigItem(
+        0,
+        description=(
+            "Maximum number of sub-items in vector columns that will be "
+            "displayed in full when printing tables. If a vector column has "
+            "more elements than this threshold, only the first and last "
+            "elements are shown separated by '..'. Set to 0 (default) to "
+            "always elide, or a negative number to always show all elements."
+        ),
+        cfgtype="integer",
+    )
 
 
 conf = Conf()

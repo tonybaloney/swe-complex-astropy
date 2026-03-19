@@ -1131,6 +1131,77 @@ def test_multidims_with_zero_dim():
     assert t.pformat(show_dtype=True) == exp
 
 
+def test_max_seq_items_show_all():
+    """Test max_seq_items config to show all vector elements."""
+    arr = np.array([[1, 2, 3], [10, 20, 30]], dtype=np.int64)
+    t = Table([arr], names=["a"])
+
+    # Default (0): elide to first .. last
+    lines = t.pformat()
+    assert lines == [
+        "   a    ",
+        "--------",
+        "  1 .. 3",
+        "10 .. 30",
+    ]
+
+    # Set threshold to 3: should show all 3 elements
+    with conf.set_temp("max_seq_items", 3):
+        lines = t.pformat()
+        assert lines == [
+            "      a       ",
+            "--------------",
+            "   1 .. 2 .. 3",
+            "10 .. 20 .. 30",
+        ]
+
+
+def test_max_seq_items_negative():
+    """Test max_seq_items with negative value (always show all)."""
+    arr = np.array([[1, 2, 3, 4, 5], [10, 20, 30, 40, 50]], dtype=np.int64)
+    t = Table([arr], names=["a"])
+
+    with conf.set_temp("max_seq_items", -1):
+        lines = t.pformat()
+        assert lines == [
+            "            a             ",
+            "--------------------------",
+            "     1 .. 2 .. 3 .. 4 .. 5",
+            "10 .. 20 .. 30 .. 40 .. 50",
+        ]
+
+
+def test_max_seq_items_below_threshold():
+    """Test that columns with more elements than threshold still elide."""
+    arr = np.array([[1, 2, 3, 4, 5], [10, 20, 30, 40, 50]], dtype=np.int64)
+    t = Table([arr], names=["a"])
+
+    # Threshold of 3, but column has 5 elements: should still elide
+    with conf.set_temp("max_seq_items", 3):
+        lines = t.pformat()
+        assert lines == [
+            "   a    ",
+            "--------",
+            "  1 .. 5",
+            "10 .. 50",
+        ]
+
+
+def test_max_seq_items_2d_subarray():
+    """Test max_seq_items with 2D sub-arrays."""
+    arr = np.arange(4, dtype=np.int64).reshape(1, 2, 2) + 1
+    t = Table([arr], names=["a"])
+
+    # Default: elide
+    lines = t.pformat()
+    assert "1 .. 4" in lines[-1]
+
+    # Show all 4 elements
+    with conf.set_temp("max_seq_items", 4):
+        lines = t.pformat()
+        assert "1 .. 2 .. 3 .. 4" in lines[-1]
+
+
 def test_zero_length_string():
     data = np.array([("", 12)], dtype=[("a", "S"), ("b", "i4")])
     t = Table(data, copy=False)
