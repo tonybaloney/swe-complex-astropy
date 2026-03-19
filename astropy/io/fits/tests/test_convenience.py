@@ -513,3 +513,38 @@ class TestConvenience(FitsTestCase):
             IndexError, match="No data in Primary HDU and no extension HDU found."
         ):
             fits.getdata(buf)
+
+    def test_getdata_upper_lower(self, tmp_path):
+        """Regression test for case-renaming keywords in getdata."""
+        # Create a FITS file with lower-case column names
+        c1 = fits.Column(name="a", format="D", array=np.zeros(5))
+        c2 = fits.Column(name="b", format="D", array=np.ones(5))
+        hdu = fits.BinTableHDU.from_columns([c1, c2])
+        filename = str(tmp_path / "test.fits")
+        hdu.writeto(filename, overwrite=True)
+
+        # upper=True should rename dtype and allow bracket access
+        data = fits.getdata(filename, upper=True)
+        assert data.dtype.names == ("A", "B")
+        assert_array_equal(data["A"], np.zeros(5))
+        # case-insensitive access should also work
+        assert_array_equal(data["a"], np.zeros(5))
+
+        # lower=True on already-lower should still work
+        data = fits.getdata(filename, lower=True)
+        assert data.dtype.names == ("a", "b")
+        assert_array_equal(data["a"], np.zeros(5))
+        assert_array_equal(data["A"], np.zeros(5))
+
+        # Create a FITS file with upper-case column names
+        c1 = fits.Column(name="A", format="D", array=np.zeros(5))
+        c2 = fits.Column(name="B", format="D", array=np.ones(5))
+        hdu = fits.BinTableHDU.from_columns([c1, c2])
+        filename2 = str(tmp_path / "test2.fits")
+        hdu.writeto(filename2, overwrite=True)
+
+        # lower=True should rename dtype and allow bracket access
+        data = fits.getdata(filename2, lower=True)
+        assert data.dtype.names == ("a", "b")
+        assert_array_equal(data["a"], np.zeros(5))
+        assert_array_equal(data["A"], np.zeros(5))

@@ -252,6 +252,12 @@ def getdata(filename, *args, header=None, lower=None, upper=None, view=None, **k
             # this data does not have fields
             return
         data.dtype.names = [trans(n) for n in data.dtype.names]
+        # Also update column names in _coldefs so that FITS_rec field
+        # access stays in sync with the renamed dtype names.
+        if hasattr(data, "_coldefs") and data._coldefs is not None:
+            for col in data._coldefs:
+                col.name = trans(col.name)
+            del data._coldefs.names
 
     # allow different views into the underlying ndarray.  Keep the original
     # view just in case there is a problem
