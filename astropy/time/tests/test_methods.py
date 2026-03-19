@@ -5,6 +5,7 @@ import warnings
 
 import numpy as np
 import pytest
+from numpy.exceptions import VisibleDeprecationWarning
 from numpy.testing import assert_array_equal
 
 import astropy.units as u
@@ -314,7 +315,9 @@ class TestSetShape(ShapeSetup):
 
         t0_reshape = self.t0.copy()
         mjd = t0_reshape.mjd  # Creates a cache of the mjd attribute
-        t0_reshape.shape = (5, 2, 5)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", VisibleDeprecationWarning)
+            t0_reshape.shape = (5, 2, 5)
         assert t0_reshape.shape == (5, 2, 5)
         assert mjd.shape != t0_reshape.mjd.shape  # Cache got cleared
         assert np.all(t0_reshape.jd1 == self.t0._time.jd1.reshape(5, 2, 5))
@@ -331,7 +334,9 @@ class TestSetShape(ShapeSetup):
         assert t0_reshape_t.jd1.shape == t0_reshape.T.shape
         assert t0_reshape_t.jd2.shape == t0_reshape.T.shape
         t1_reshape = self.t1.copy()
-        t1_reshape.shape = (2, 5, 5)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", VisibleDeprecationWarning)
+            t1_reshape.shape = (2, 5, 5)
         assert t1_reshape.shape == (2, 5, 5)
         assert np.all(t1_reshape.jd1 == self.t1.jd1.reshape(2, 5, 5))
         # location is a single element, so its shape should not change.
@@ -339,7 +344,9 @@ class TestSetShape(ShapeSetup):
         # For reshape(5, 2, 5), the location array can remain the same.
         # Note that we need to work directly on self.t2 here, since any
         # copy would cause location to have the full shape.
-        self.t2.shape = (5, 2, 5)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", VisibleDeprecationWarning)
+            self.t2.shape = (5, 2, 5)
         assert self.t2.shape == (5, 2, 5)
         assert self.t2.jd1.shape == (5, 2, 5)
         assert self.t2.jd2.shape == (5, 2, 5)

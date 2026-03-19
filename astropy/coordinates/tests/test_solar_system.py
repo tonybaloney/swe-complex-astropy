@@ -1,7 +1,9 @@
 from urllib.error import HTTPError
+import warnings
 
 import numpy as np
 import pytest
+from numpy.exceptions import VisibleDeprecationWarning
 
 from astropy import units as u
 from astropy.constants import c
@@ -279,6 +281,16 @@ def test_earth_barycentric_velocity_rough():
         / u.s
     )
     assert_quantity_allclose(ev.xyz, expected, atol=1.0 * u.km / u.s)
+
+
+def test_earth_barycentric_posvel_no_shape_warning():
+    t = Time(["2016-03-20T12:30:00", "2016-03-21T12:30:00"]).reshape(1, 2)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", VisibleDeprecationWarning)
+        ep, ev = get_body_barycentric_posvel("earth", t)
+
+    assert ep.shape == t.shape
+    assert ev.shape == t.shape
 
 
 def test_earth_barycentric_velocity_multi_d():
