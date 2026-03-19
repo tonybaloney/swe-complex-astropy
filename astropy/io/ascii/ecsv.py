@@ -196,6 +196,14 @@ class EcsvHeader(basic.BasicHeader):
 
         if "meta" in header:
             self.table_meta = header["meta"]
+            # If meta is a list (YAML without !!omap tag), convert it to an
+            # OrderedDict so it can be used as a mapping.
+            if isinstance(self.table_meta, list):
+                self.table_meta = OrderedDict(
+                    (key, val)
+                    for item in self.table_meta
+                    for key, val in item.items()
+                )
 
         if "delimiter" in header:
             delimiter = header["delimiter"]
