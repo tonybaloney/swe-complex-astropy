@@ -9,7 +9,6 @@ import sys
 
 import numpy as np
 import pytest
-from numpy import char as chararray
 
 try:
     import objgraph
@@ -20,9 +19,11 @@ except ImportError:
 
 from astropy.io import fits
 from astropy.io.fits.column import NUMPY2FITS, ColumnAttribute, Delayed
+from astropy.io.fits.fitsrec import _FITSCharArray
 from astropy.io.fits.util import decode_ascii
 from astropy.io.fits.verify import VerifyError
 from astropy.table import Table
+from astropy.utils.exceptions import AstropyDeprecationWarning
 from astropy.units import Unit, UnitsWarning, UnrecognizedUnit
 from astropy.utils.exceptions import AstropyUserWarning
 
@@ -156,7 +157,7 @@ class TestTableFunctions(FitsTestCase):
         fd = fits.open(self.data("test0.fits"))
 
         # create some local arrays
-        a1 = chararray.array(["abc", "def", "xx"])
+        a1 = np.array(["abc", "def", "xx"])
         r1 = np.array([11.0, 12.0, 13.0], dtype=np.float32)
 
         # create a table from scratch, using a mixture of columns from existing
@@ -319,7 +320,7 @@ class TestTableFunctions(FitsTestCase):
 
         # Test Start Column
 
-        a1 = chararray.array(["abcd", "def"])
+        a1 = np.array(["abcd", "def"])
         r1 = np.array([11.0, 12.0])
         c1 = fits.Column(name="abc", format="A3", start=19, array=a1)
         c2 = fits.Column(name="def", format="E", start=3, array=r1)
@@ -1974,7 +1975,7 @@ class TestTableFunctions(FitsTestCase):
             "p\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         )
 
-        acol = fits.Column(name="MEMNAME", format="A10", array=chararray.array(a))
+        acol = fits.Column(name="MEMNAME", format="A10", array=np.array(a))
         ahdu = fits.BinTableHDU.from_columns([acol])
         assert ahdu.data.tobytes().decode("raw-unicode-escape") == s
         ahdu.writeto(self.temp("newtable.fits"))
@@ -2232,8 +2233,10 @@ class TestTableFunctions(FitsTestCase):
         with fits.open(self.temp("test.fits")) as h:
             # Need to force string arrays to byte arrays in order to compare
             # correctly on Python 3
-            assert (h[1].data["str"].encode("ascii") == arra).all()
-            assert (h[1].data["strarray"].encode("ascii") == arrb).all()
+            assert (np.strings.encode(h[1].data["str"], "ascii") == arra).all()
+            assert (
+                np.strings.encode(h[1].data["strarray"], "ascii") == arrb
+            ).all()
             assert (h[1].data["intarray"] == arrc).all()
 
     def test_mismatched_tform_and_tdim(self):
@@ -4015,3 +4018,78 @@ def test_zero_row_string_column(tmp_path):
     with fits.open(outfile) as hdul:
         table_data = hdul[1].data
     assert table_data.shape[0] == 0
+
+
+class TestFITSCharArray:
+    """Tests for the _FITSCharArray class that replaces chararray usage."""
+
+    def test_string_column_is_fits_chararray(self):
+        """String columns from FITS tables should be _FITSCharArray instances."""
+        col = fits.Column(name="text", format="10A", array=["hello", "world"])
+        hdu = fits.BinTableHDU.from_columns([col])
+        field = hdu.data.field("text")
+        assert isinstance(field, _FITSCharArray)
+
+    def test_auto_rstrip_on_element_access(self):
+        """Trailing whitespace should be auto-stripped on element access."""
+        col = fits.Column(name="text", format="10A", array=["hello", "world"])
+        hdu = fits.BinTableHDU.from_columns([col])
+        # Elements should be rstripped
+        assert hdu.data["text"][0] == "hello"
+        assert hdu.data["text"][1] == "world"
+
+    def test_auto_rstrip_bytes(self):
+        """Trailing whitespace should be auto-stripped for bytes arrays."""
+        arr = np.array([b"hello   ", b"world   "], dtype="S8")
+        fits_arr = arr.view(_FITSCharArray)
+        assert fits_arr[0] == b"hello"
+        assert fits_arr[1] == b"world"
+
+    def test_auto_rstrip_unicode(self):
+        """Trailing whitespace should be auto-stripped for unicode arrays."""
+        arr = np.array(["hello   ", "world   "], dtype="U8")
+        fits_arr = arr.view(_FITSCharArray)
+        assert fits_arr[0] == "hello"
+        assert fits_arr[1] == "world"
+
+    def test_slice_returns_fits_chararray(self):
+        """Slicing a _FITSCharArray should return a _FITSCharArray."""
+        arr = np.array([b"hello   ", b"world   ", b"test    "], dtype="S8")
+        fits_arr = arr.view(_FITSCharArray)
+        sliced = fits_arr[0:2]
+        assert isinstance(sliced, _FITSCharArray)
+        assert sliced[0] == b"hello"
+
+    def test_isinstance_chararray_compat(self):
+        """_FITSCharArray should still be a chararray instance for backwards compat."""
+        arr = np.array([b"hello"], dtype="S5")
+        fits_arr = arr.view(_FITSCharArray)
+        assert isinstance(fits_arr, np.char.chararray)
+
+    def test_chararray_method_deprecation_warning(self):
+        """Accessing chararray methods should raise a deprecation warning."""
+        arr = np.array([b"hello", b"world"], dtype="S5")
+        fits_arr = arr.view(_FITSCharArray)
+        with pytest.warns(
+            AstropyDeprecationWarning,
+            match="Accessing chararray method 'upper'",
+        ):
+            fits_arr.upper()
+
+    def test_chararray_method_still_works(self):
+        """Deprecated chararray methods should still work."""
+        arr = np.array([b"hello", b"world"], dtype="S5")
+        fits_arr = arr.view(_FITSCharArray)
+        with pytest.warns(AstropyDeprecationWarning):
+            result = fits_arr.upper()
+        assert result[0] == b"HELLO"
+        assert result[1] == b"WORLD"
+
+    def test_normal_attributes_no_warning(self):
+        """Normal ndarray attributes should not trigger deprecation warnings."""
+        arr = np.array([b"hello", b"world"], dtype="S5")
+        fits_arr = arr.view(_FITSCharArray)
+        # These should not emit warnings
+        _ = fits_arr.dtype
+        _ = fits_arr.shape
+        _ = fits_arr.size

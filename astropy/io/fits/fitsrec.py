@@ -8,9 +8,9 @@ from contextlib import suppress
 from functools import reduce
 
 import numpy as np
-from numpy import char as chararray
 
 from astropy.utils import lazyproperty
+from astropy.utils.exceptions import AstropyDeprecationWarning
 
 from .column import (
     _VLF,
@@ -29,6 +29,89 @@ from .column import (
     _wrapx,
 )
 from .util import _rstrip_inplace, decode_ascii, encode_ascii
+
+
+# Methods inherited from chararray that are deprecated on FITS string columns.
+_CHARARRAY_DEPRECATED_METHODS = frozenset(
+    {
+        "capitalize",
+        "center",
+        "count",
+        "decode",
+        "encode",
+        "endswith",
+        "expandtabs",
+        "find",
+        "index",
+        "isalnum",
+        "isalpha",
+        "isdigit",
+        "islower",
+        "isspace",
+        "istitle",
+        "isupper",
+        "join",
+        "ljust",
+        "lower",
+        "lstrip",
+        "partition",
+        "replace",
+        "rfind",
+        "rindex",
+        "rjust",
+        "rpartition",
+        "rsplit",
+        "rstrip",
+        "split",
+        "splitlines",
+        "startswith",
+        "strip",
+        "swapcase",
+        "title",
+        "translate",
+        "upper",
+        "zfill",
+    }
+)
+
+
+class _FITSCharArray(np.char.chararray):
+    """String array for FITS table data with automatic trailing whitespace stripping.
+
+    This class replaces direct use of `numpy.char.chararray` in FITS I/O.
+    It currently inherits from `numpy.char.chararray` for backwards
+    compatibility, but this inheritance will be removed in a future version.
+
+    The only behavior that FITS I/O needs from ``chararray`` is the automatic
+    stripping of trailing whitespace on element access, which this class
+    implements independently so that it will continue to work when the
+    ``chararray`` base class is removed.
+
+    Users should not rely on ``chararray``-specific string methods being
+    available on FITS string column data.  Use the free functions in
+    `numpy.char` instead (e.g. ``numpy.char.upper(array)``).
+    """
+
+    def __getitem__(self, key):
+        # Implement our own rstrip independent of chararray so that the
+        # behavior is preserved when chararray inheritance is removed.
+        val = np.ndarray.__getitem__(self, key)
+        if isinstance(val, (bytes, np.bytes_)):
+            return val.rstrip()
+        elif isinstance(val, (str, np.str_)):
+            return val.rstrip()
+        return val
+
+    def __getattribute__(self, name):
+        if name in _CHARARRAY_DEPRECATED_METHODS:
+            warnings.warn(
+                f"Accessing chararray method '{name}' on FITS string columns "
+                "is deprecated and will be removed in a future version. "
+                f"Use numpy.char.{name}(array) instead.",
+                AstropyDeprecationWarning,
+                stacklevel=2,
+            )
+        return super().__getattribute__(name)
 
 
 class FITS_record:
@@ -831,7 +914,7 @@ class FITS_rec(np.recarray):
                 dt = np.dtype(recformat.dtype + str(1))
                 arr_len = count * dt.itemsize
                 da = raw_data[offset : offset + arr_len].view(dt)
-                da = np.char.array(da.view(dtype=dt), itemsize=count)
+                da = np.char.array(da.view(dtype=dt), itemsize=count).view(np.ndarray)
                 dummy[idx] = decode_ascii(da)
             else:
                 dt = np.dtype(recformat.dtype)
@@ -1204,7 +1287,7 @@ class FITS_rec(np.recarray):
                 if isinstance(self._coldefs, _AsciiColDefs):
                     self._scale_back_ascii(index, dummy, raw_field)
                 # binary table string column
-                elif isinstance(raw_field, chararray.chararray):
+                elif raw_field.dtype.kind in ("S", "U"):
                     self._scale_back_strings(index, dummy, raw_field)
                 # all other binary table columns
                 else:
@@ -1341,7 +1424,7 @@ class FITS_rec(np.recarray):
 
         # Replace exponent separator in floating point numbers
         if "D" in format:
-            output_field[:] = output_field.replace(b"E", b"D")
+            output_field[:] = np.char.replace(output_field, b"E", b"D")
 
     def tolist(self):
         # Override .tolist to take care of special case of VLF
@@ -1354,15 +1437,12 @@ class FITS_rec(np.recarray):
 def _get_recarray_field(array, key):
     """
     Compatibility function for using the recarray base class's field method.
-    This incorporates the legacy functionality of returning string arrays as
-    Numeric-style chararray objects.
+    This returns string arrays as `_FITSCharArray` objects which automatically
+    strip trailing whitespace on element access.
     """
-    # Numpy >= 1.10.dev recarray no longer returns chararrays for strings
-    # This is currently needed for backwards-compatibility and for
-    # automatic truncation of trailing whitespace
     field = np.recarray.field(array, key)
-    if field.dtype.char in ("S", "U") and not isinstance(field, chararray.chararray):
-        field = field.view(chararray.chararray)
+    if field.dtype.char in ("S", "U") and not isinstance(field, _FITSCharArray):
+        field = field.view(_FITSCharArray)
     return field
 
 

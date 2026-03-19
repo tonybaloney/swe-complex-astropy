@@ -252,6 +252,17 @@ astropy.io.registry
 - ``UnifiedInputRegistry`` and ``UnifiedOutputRegistry``'s ``delay_doc_updates``
   method's effect is disabled under Python's optimized mode (``-OO`` flag). [#17572]
 
+astropy.io.fits
+^^^^^^^^^^^^^^^
+
+- FITS string table columns are now returned as ``_FITSCharArray`` instances instead
+  of ``numpy.char.chararray`` instances. The new class currently still inherits
+  from ``chararray`` for backwards compatibility, but this will change in a future
+  version. Accessing ``chararray``-specific string methods (e.g. ``.upper()``,
+  ``.lower()``) on FITS string columns now emits an
+  ``AstropyDeprecationWarning``. Use the free functions in ``numpy.char`` instead
+  (e.g. ``numpy.char.upper(array)``). [#19267]
+
 astropy.io.votable
 ^^^^^^^^^^^^^^^^^^
 
