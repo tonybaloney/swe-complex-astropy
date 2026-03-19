@@ -16,6 +16,11 @@ from textwrap import indent
 import numpy as np
 from numpy import char as chararray
 
+CHARARRAY_TYPES = (np.ndarray,)
+
+if hasattr(chararray, "chararray"):
+    CHARARRAY_TYPES += (chararray.chararray,)
+
 from astropy.utils import lazyproperty
 from astropy.utils.exceptions import AstropyUserWarning
 
@@ -696,7 +701,7 @@ class Column(NotifierMixin):
         # input arrays can be just list or tuple, not required to be ndarray
         # does not include Object array because there is no guarantee
         # the elements in the object array are consistent.
-        if not isinstance(array, (np.ndarray, chararray.chararray, Delayed)):
+        if not isinstance(array, (*CHARARRAY_TYPES, Delayed)):
             try:  # try to convert to a ndarray first
                 if array is not None:
                     array = np.array(array)
@@ -2105,7 +2110,7 @@ class _VLF(np.ndarray):
         """
         if isinstance(value, np.ndarray) and value.dtype == self.dtype:
             pass
-        elif isinstance(value, chararray.chararray) and value.itemsize == 1:
+        elif isinstance(value, CHARARRAY_TYPES) and value.itemsize == 1:
             pass
         elif self.element_dtype == "S":
             value = chararray.array(value, itemsize=1)

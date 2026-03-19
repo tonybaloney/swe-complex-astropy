@@ -10,6 +10,13 @@ from functools import reduce
 import numpy as np
 from numpy import char as chararray
 
+CHARARRAY_TYPES = (np.ndarray,)
+CHARARRAY_CLS = None
+
+if hasattr(chararray, "chararray"):
+    CHARARRAY_TYPES += (chararray.chararray,)
+    CHARARRAY_CLS = chararray.chararray
+
 from astropy.utils import lazyproperty
 
 from .column import (
@@ -1204,7 +1211,7 @@ class FITS_rec(np.recarray):
                 if isinstance(self._coldefs, _AsciiColDefs):
                     self._scale_back_ascii(index, dummy, raw_field)
                 # binary table string column
-                elif isinstance(raw_field, chararray.chararray):
+                elif isinstance(raw_field, CHARARRAY_TYPES):
                     self._scale_back_strings(index, dummy, raw_field)
                 # all other binary table columns
                 else:
@@ -1361,8 +1368,10 @@ def _get_recarray_field(array, key):
     # This is currently needed for backwards-compatibility and for
     # automatic truncation of trailing whitespace
     field = np.recarray.field(array, key)
-    if field.dtype.char in ("S", "U") and not isinstance(field, chararray.chararray):
-        field = field.view(chararray.chararray)
+    if field.dtype.char in ("S", "U") and CHARARRAY_CLS is not None and not isinstance(
+        field, CHARARRAY_CLS
+    ):
+        field = field.view(CHARARRAY_CLS)
     return field
 
 
