@@ -14,7 +14,7 @@ from numpy.testing import assert_array_equal
 from astropy import units as u
 from astropy.coordinates import Longitude
 from astropy.units import Quantity
-from astropy.utils.compat import NUMPY_LT_2_0, NUMPY_LT_2_2, NUMPY_LT_2_3
+from astropy.utils.compat import NUMPY_LT_2_0, NUMPY_LT_2_2, NUMPY_LT_2_3, NUMPY_LT_2_5
 from astropy.utils.compat.optional_deps import HAS_PLT
 from astropy.utils.masked import Masked, MaskedNDArray
 
@@ -305,7 +305,10 @@ class TestMaskedNDArraySubclassCreation:
     def test_viewing_independent_shape(self):
         mms = Masked(self.a, mask=self.m)
         mms2 = mms.view()
-        mms2.shape = mms2.shape[::-1]
+        if NUMPY_LT_2_5:
+            mms2.shape = mms2.shape[::-1]
+        else:
+            mms2._set_shape(mms2.shape[::-1])
         assert mms2.shape == mms.shape[::-1]
         assert mms2.mask.shape == mms.shape[::-1]
         # This should not affect the original array!
@@ -564,7 +567,10 @@ class TestMaskedArrayShaping(MaskedArraySetup):
 
     def test_shape_setting(self):
         ma_reshape = self.ma.copy()
-        ma_reshape.shape = (6,)
+        if NUMPY_LT_2_5:
+            ma_reshape.shape = (6,)
+        else:
+            ma_reshape._set_shape((6,))
         expected_data = self.a.reshape((6,))
         expected_mask = self.mask_a.reshape((6,))
         assert ma_reshape.shape == expected_data.shape
@@ -574,7 +580,10 @@ class TestMaskedArrayShaping(MaskedArraySetup):
     def test_shape_setting_failure(self):
         ma = self.ma.copy()
         with pytest.raises(ValueError, match="cannot reshape"):
-            ma.shape = (5,)
+            if NUMPY_LT_2_5:
+                ma.shape = (5,)
+            else:
+                ma._set_shape((5,))
 
         assert ma.shape == self.ma.shape
         assert ma.mask.shape == self.ma.shape
@@ -582,7 +591,10 @@ class TestMaskedArrayShaping(MaskedArraySetup):
         # Here, mask can be reshaped but array cannot.
         ma2 = Masked(np.broadcast_to([[1.0], [2.0]], self.a.shape), mask=self.mask_a)
         with pytest.raises(AttributeError, match="ncompatible shape"):
-            ma2.shape = (6,)
+            if NUMPY_LT_2_5:
+                ma2.shape = (6,)
+            else:
+                ma2._set_shape((6,))
 
         assert ma2.shape == self.ma.shape
         assert ma2.mask.shape == self.ma.shape
@@ -592,7 +604,10 @@ class TestMaskedArrayShaping(MaskedArraySetup):
             self.a.copy(), mask=np.broadcast_to([[True], [False]], self.mask_a.shape)
         )
         with pytest.raises(AttributeError, match="ncompatible shape"):
-            ma3.shape = (6,)
+            if NUMPY_LT_2_5:
+                ma3.shape = (6,)
+            else:
+                ma3._set_shape((6,))
 
         assert ma3.shape == self.ma.shape
         assert ma3.mask.shape == self.ma.shape
