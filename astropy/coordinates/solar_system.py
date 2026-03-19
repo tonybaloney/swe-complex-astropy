@@ -14,6 +14,7 @@ import numpy as np
 
 from astropy import units as u
 from astropy.constants import c as speed_of_light
+from astropy.utils.compat import _set_array_shape
 from astropy.utils.compat.optional_deps import HAS_JPLEPHEM
 from astropy.utils.data import download_file
 from astropy.utils.decorators import classproperty
@@ -315,7 +316,9 @@ def _get_body_barycentric_posvel(body, time, ephemeris=None, get_velocity=True):
                     ):
                         body_p_or_v += p_or_v
 
-            body_posvel_bary.shape = body_posvel_bary.shape[:2] + jd1_shape
+            _set_array_shape(
+                body_posvel_bary, body_posvel_bary.shape[:2] + jd1_shape
+            )
             body_pos_bary = CartesianRepresentation(
                 body_posvel_bary[0], unit=u.km, copy=False
             )

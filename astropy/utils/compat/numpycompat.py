@@ -18,6 +18,7 @@ __all__ = [
     "NUMPY_LT_2_4",
     "NUMPY_LT_2_4_1",
     "NUMPY_LT_2_5",
+    "_set_array_shape",
 ]
 
 # TODO: It might also be nice to have aliases to these named for specific
@@ -29,6 +30,18 @@ NUMPY_LT_2_3 = not minversion(np, "2.3.0.dev0")
 NUMPY_LT_2_4 = not minversion(np, "2.4.0.dev0")
 NUMPY_LT_2_4_1 = not minversion(np, "2.4.1.dev0")
 NUMPY_LT_2_5 = not minversion(np, "2.5.0.dev0")
+
+
+def _set_array_shape(array, shape):
+    """Set the shape of a numpy array.
+
+    Uses ``ndarray._set_shape`` on NumPy 2.5+ where direct assignment to
+    ``ndarray.shape`` is deprecated.
+    """
+    if NUMPY_LT_2_5:
+        array.shape = shape
+    else:
+        array._set_shape(shape)
 
 
 def __getattr__(attr):

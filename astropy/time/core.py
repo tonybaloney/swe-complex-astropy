@@ -27,6 +27,7 @@ from astropy import units as u
 from astropy.extern import _strptime
 from astropy.units import UnitConversionError
 from astropy.utils import lazyproperty
+from astropy.utils.compat import _set_array_shape
 from astropy.utils.data_info import MixinInfo, data_info_factory
 from astropy.utils.decorators import deprecated
 from astropy.utils.exceptions import AstropyDeprecationWarning, AstropyWarning
@@ -927,10 +928,10 @@ class TimeBase(MaskableShapedLikeNDArray):
             val = getattr(obj, attr, None)
             if val is not None and val.size > 1:
                 try:
-                    val.shape = shape
+                    _set_array_shape(val, shape)
                 except Exception:
                     for val2 in reshaped:
-                        val2.shape = oldshape
+                        _set_array_shape(val2, oldshape)
                     raise
                 else:
                     reshaped.append(val)
