@@ -8,7 +8,6 @@ from contextlib import suppress
 from functools import reduce
 
 import numpy as np
-from numpy import char as chararray
 
 from astropy.utils import lazyproperty
 
@@ -25,6 +24,7 @@ from .column import (
     _FormatX,
     _get_index,
     _makep,
+    _to_str_array,
     _unwrapx,
     _wrapx,
 )
@@ -831,7 +831,7 @@ class FITS_rec(np.recarray):
                 dt = np.dtype(recformat.dtype + str(1))
                 arr_len = count * dt.itemsize
                 da = raw_data[offset : offset + arr_len].view(dt)
-                da = np.char.array(da.view(dtype=dt), itemsize=count)
+                da = _to_str_array(da.view(dtype=dt), itemsize=count)
                 dummy[idx] = decode_ascii(da)
             else:
                 dt = np.dtype(recformat.dtype)
@@ -1204,7 +1204,10 @@ class FITS_rec(np.recarray):
                 if isinstance(self._coldefs, _AsciiColDefs):
                     self._scale_back_ascii(index, dummy, raw_field)
                 # binary table string column
-                elif isinstance(raw_field, chararray.chararray):
+                elif isinstance(raw_field, np.ndarray) and raw_field.dtype.kind in (
+                    "S",
+                    "U",
+                ):
                     self._scale_back_strings(index, dummy, raw_field)
                 # all other binary table columns
                 else:
@@ -1341,7 +1344,7 @@ class FITS_rec(np.recarray):
 
         # Replace exponent separator in floating point numbers
         if "D" in format:
-            output_field[:] = output_field.replace(b"E", b"D")
+            output_field[:] = np.char.replace(output_field, b"E", b"D")
 
     def tolist(self):
         # Override .tolist to take care of special case of VLF
@@ -1357,12 +1360,15 @@ def _get_recarray_field(array, key):
     This incorporates the legacy functionality of returning string arrays as
     Numeric-style chararray objects.
     """
-    # Numpy >= 1.10.dev recarray no longer returns chararrays for strings
-    # This is currently needed for backwards-compatibility and for
-    # automatic truncation of trailing whitespace
     field = np.recarray.field(array, key)
-    if field.dtype.char in ("S", "U") and not isinstance(field, chararray.chararray):
-        field = field.view(chararray.chararray)
+    if field.dtype.char in ("S", "U") and not isinstance(field, np.char.chararray):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The chararray class is deprecated",
+                category=DeprecationWarning,
+            )
+            field = field.view(np.char.chararray)
     return field
 
 
