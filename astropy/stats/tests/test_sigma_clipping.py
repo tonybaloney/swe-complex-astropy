@@ -468,6 +468,28 @@ def test_sigma_clippped_stats_all_masked():
     assert result == (np.ma.masked, np.ma.masked, np.ma.masked)
 
 
+def test_sigmaclip_pickle():
+    """Test that SigmaClip objects can be pickled and unpickled."""
+    import pickle
+
+    sigclip = SigmaClip(sigma=3.0, sigma_lower=2.0, sigma_upper=4.0,
+                        maxiters=5, cenfunc='mean', stdfunc='mad_std')
+    sigclip2 = pickle.loads(pickle.dumps(sigclip))
+    assert repr(sigclip) == repr(sigclip2)
+
+    # also test with default parameters
+    sigclip3 = SigmaClip()
+    sigclip4 = pickle.loads(pickle.dumps(sigclip3))
+    assert repr(sigclip3) == repr(sigclip4)
+
+    # test that the unpickled object is functional
+    rng = np.random.default_rng(12345)
+    data = rng.normal(0, 1, 100)
+    result1 = sigclip(data)
+    result2 = sigclip2(data)
+    assert_equal(result1, result2)
+
+
 def test_sigma_clip_masked_data_values():
     """
     Test that the data values & type returned by sigma_clip are the same as
