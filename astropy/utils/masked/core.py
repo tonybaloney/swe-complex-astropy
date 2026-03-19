@@ -617,11 +617,13 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
         if "info" not in cls.__dict__ and hasattr(cls._data_cls, "info"):
             data_info = cls._data_cls.info
             attr_names = data_info.attr_names | {"serialize_method"}
+            info_name = cls.__name__ + "Info"
             new_info = type(
-                cls.__name__ + "Info",
+                info_name,
                 (MaskedArraySubclassInfo, data_info.__class__),
-                dict(attr_names=attr_names),
+                dict(attr_names=attr_names, __module__="astropy.utils.data_info"),
             )
+            setattr(data_info_module, info_name, new_info)
             cls.info = new_info()
 
     # The two pieces typically overridden.

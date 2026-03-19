@@ -2,11 +2,13 @@ import pickle
 
 import numpy as np
 
+import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Column, MaskedColumn, QTable, Table
 from astropy.table.table_helpers import simple_table
 from astropy.time import Time
 from astropy.units import Quantity, deg
+from astropy.utils.masked import Masked
 
 
 def test_pickle_column(protocol):
@@ -155,3 +157,16 @@ def test_pickle_indexed_table(protocol):
     for index, indexp in zip(t.indices, tp.indices):
         assert np.all(index.data.data == indexp.data.data)
         assert index.data.data.colnames == indexp.data.data.colnames
+
+
+def test_pickle_qtable_masked_quantity(protocol):
+    masked_quantity = Masked(np.arange(3) * u.m, mask=[True, False, False])
+    table = QTable([masked_quantity], names=["a"])
+
+    roundtrip = pickle.loads(pickle.dumps(table, protocol=protocol))
+
+    assert isinstance(roundtrip, QTable)
+    assert np.all(roundtrip["a"].unmasked == table["a"].unmasked)
+    assert np.all(roundtrip["a"].mask == table["a"].mask)
+    assert roundtrip["a"].unit == table["a"].unit
+    assert type(roundtrip["a"]) is type(table["a"])
