@@ -6,6 +6,7 @@ import gc
 import pickle
 import re
 import sys
+import warnings
 
 import numpy as np
 import pytest
@@ -288,19 +289,32 @@ class TestTableFunctions(FitsTestCase):
         t.close()
 
     def test_ascii_table(self):
+        from astropy.io.fits.verify import VerifyWarning
+
         # ASCII table
         a = fits.open(self.data("ascii.fits"))
+        with pytest.warns(VerifyWarning, match="TNULLn.*not allowed.*floating"):
+            a[1].columns
         ra1 = np.rec.array(
             [
                 (10.123000144958496, 37),
                 (5.1999998092651367, 23),
                 (15.609999656677246, 17),
-                (0.0, 0),
+                (np.nan, 0),
                 (345.0, 345),
             ],
             names="c1, c2",
         )
-        assert comparerecords(a[1].data, ra1)
+        # comparerecords doesn't properly handle NaN, so check the NaN row
+        # separately and then compare the rest
+        assert np.isnan(a[1].data[3][0])
+        assert a[1].data[3][1] == 0
+        # Check non-NaN rows
+        for i in [0, 1, 2, 4]:
+            assert comparerecords(
+                a[1].data[i : i + 1],
+                ra1[i : i + 1],
+            )
 
         # Test slicing
         a2 = a[1].data[2:][2:]
@@ -1889,12 +1903,14 @@ class TestTableFunctions(FitsTestCase):
             assert (data == tbdata.field(col)).all()
             assert (data == tbdata[col]).all()
 
-        # ascii table
-        tbdata = fits.getdata(self.data("ascii.fits"))
+        # ascii table (note: ascii.fits has a non-standard TNULL on float column)
+        with pytest.warns(match="TNULLn.*not allowed.*floating"):
+            tbdata = fits.getdata(self.data("ascii.fits"))
         for col in ("a", "b"):
             data = getattr(tbdata, col)
-            assert (data == tbdata.field(col)).all()
-            assert (data == tbdata[col]).all()
+            # Use array_equal with equal_nan to handle NaN values from TNULL
+            assert np.array_equal(data, tbdata.field(col), equal_nan=True)
+            assert np.array_equal(data, tbdata[col], equal_nan=True)
 
         # with VLA column
         col1 = fits.Column(
@@ -2568,12 +2584,11 @@ class TestTableFunctions(FitsTestCase):
         with fits.open(self.temp("ascii_null.fits"), memmap=True) as f:
             assert f[1].data[2][0] == 0
 
-        # Test a float column with a null value set and blank fields.
-        nullval2 = "NaN"
+        # Test a float column with blank fields (no TNULL, since it's
+        # not allowed for float columns per the FITS standard).
         c2 = fits.Column(
             "F1",
             format="F12.8",
-            null=nullval2,
             array=np.array([1.0, 2.0, 3.0, 4.0]),
             ascii=True,
         )
@@ -2587,9 +2602,42 @@ class TestTableFunctions(FitsTestCase):
             h.write(nulled)
 
         with fits.open(self.temp("ascii_null2.fits"), memmap=True) as f:
-            # (Currently it should evaluate to 0.0, but if a TODO in fitsrec is
-            # completed, then it should evaluate to NaN.)
-            assert f[1].data[2][0] == 0.0 or np.isnan(f[1].data[2][0])
+            # Blank fields in float columns should be replaced with NaN.
+            assert np.isnan(f[1].data[2][0])
+
+    def test_tnull_ignored_for_float_columns(self):
+        """Regression test for https://github.com/astropy/astropy/issues/19025
+
+        The FITS standard does not allow TNULL for floating-point columns in
+        ASCII tables.  A warning should be issued when reading such files, and
+        null values should be replaced with NaN (not 0) for float columns.
+        """
+        from astropy.io.fits.verify import VerifyWarning
+
+        # Integer column TNULL should still be allowed
+        c = fits.Column("I1", format="I8", null="---", ascii=True)
+        assert c.null == "---"
+
+        # When reading a file with TNULL on float columns, a warning should
+        # be issued.
+        c_int = fits.Column(
+            "I1",
+            format="I8",
+            null="---",
+            array=np.array([1, 2, 3]),
+            ascii=True,
+        )
+        table = fits.TableHDU.from_columns([c_int])
+        table.writeto(self.temp("tnull_float.fits"))
+
+        # Manually edit the header to change the format to float and add TNULL
+        with fits.open(self.temp("tnull_float.fits"), mode="update") as h:
+            h[1].header["TFORM1"] = "F8.3"
+            h[1].header["TNULL1"] = "NaN"
+
+        with pytest.warns(VerifyWarning, match="TNULLn.*not allowed.*floating"):
+            with fits.open(self.temp("tnull_float.fits")) as h:
+                h[1].columns
 
     def test_column_array_type_mismatch(self):
         """Regression test for https://aeon.stsci.edu/ssb/trac/pyfits/ticket/218"""
@@ -2708,10 +2756,12 @@ class TestTableFunctions(FitsTestCase):
 
             assert comparerecords(btb_pl, btb[1].data)
 
-        with fits.open(self.data("ascii.fits")) as asc:
-            asc_pd = pickle.dumps(asc[1].data)
-            asc_pl = pickle.loads(asc_pd)
-            assert comparerecords(asc_pl, asc[1].data)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with fits.open(self.data("ascii.fits")) as asc:
+                asc_pd = pickle.dumps(asc[1].data)
+                asc_pl = pickle.loads(asc_pd)
+                assert comparerecords(asc_pl, asc[1].data)
 
         with fits.open(self.data("random_groups.fits")) as rgr:
             rgr_pd = pickle.dumps(rgr[0].data)
@@ -3609,10 +3659,12 @@ class TestColumnFunctions(FitsTestCase):
 
             assert comparerecords(btb_pl, btb[1].data)
 
-        with fits.open(self.data("ascii.fits")) as asc:
-            asc_pd = pickle.dumps(asc[1].data)
-            asc_pl = pickle.loads(asc_pd)
-            assert comparerecords(asc_pl, asc[1].data)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with fits.open(self.data("ascii.fits")) as asc:
+                asc_pd = pickle.dumps(asc[1].data)
+                asc_pl = pickle.loads(asc_pd)
+                assert comparerecords(asc_pl, asc[1].data)
 
         with fits.open(self.data("random_groups.fits")) as rgr:
             rgr_pd = pickle.dumps(rgr[0].data)

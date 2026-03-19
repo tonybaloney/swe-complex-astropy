@@ -868,9 +868,12 @@ class FITS_rec(np.recarray):
         format = column.format
         recformat = getattr(format, "recformat", ASCII2NUMPY[format[0]])
         # if the string = TNULL, return ASCIITNULL
-        nullval = str(column.null).strip().encode("ascii")
-        if len(nullval) > format.width:
-            nullval = nullval[: format.width]
+        if column.null is not None:
+            nullval = str(column.null).strip().encode("ascii")
+            if len(nullval) > format.width:
+                nullval = nullval[: format.width]
+        else:
+            nullval = b""
 
         # Before using .replace make sure that any trailing bytes in each
         # column are filled with spaces, and *not*, say, nulls; this causes
@@ -878,16 +881,21 @@ class FITS_rec(np.recarray):
         # array buffer.
         dummy = np.char.ljust(field, format.width)
         dummy = np.char.replace(dummy, encode_ascii("D"), encode_ascii("E"))
-        null_fill = encode_ascii(str(ASCIITNULL).rjust(format.width))
 
-        # Convert all fields equal to the TNULL value (nullval) to empty fields.
-        # TODO: These fields really should be converted to NaN or something else undefined.
-        # Currently they are converted to empty fields, which are then set to zero.
-        dummy = np.where(np.char.strip(dummy) == nullval, null_fill, dummy)
+        # For floating-point columns, use NaN as the null fill value
+        # instead of 0, since NaN is the standard representation for
+        # undefined values in floating-point data.
+        if np.issubdtype(np.dtype(recformat), np.floating):
+            null_fill = encode_ascii("NaN".rjust(format.width))
+        else:
+            null_fill = encode_ascii(str(ASCIITNULL).rjust(format.width))
+
+        # Convert all fields equal to the TNULL value (nullval) to null fill.
+        if nullval != b"":
+            dummy = np.where(np.char.strip(dummy) == nullval, null_fill, dummy)
 
         # always replace empty fields, see https://github.com/astropy/astropy/pull/5394
-        if nullval != b"":
-            dummy = np.where(np.char.strip(dummy) == b"", null_fill, dummy)
+        dummy = np.where(np.char.strip(dummy) == b"", null_fill, dummy)
 
         try:
             dummy = np.array(dummy, dtype=recformat)

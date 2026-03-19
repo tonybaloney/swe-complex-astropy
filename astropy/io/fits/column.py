@@ -1610,6 +1610,25 @@ class ColDefs(NotifierMixin):
                 warnings.warn(
                     f"Invalid keyword for column {idx + 1}: {val[1]}", VerifyWarning
                 )
+            # Per the FITS standard, TNULL is not valid for floating-point
+            # columns in ASCII tables.  Warn about this but keep the value
+            # for backward compatibility in data reading.
+            fmt = valid_kwargs.get("format")
+            null = valid_kwargs.get("null")
+            if (
+                null is not None
+                and isinstance(fmt, _AsciiColumnFormat)
+                and fmt.format in ("F", "E", "D")
+            ):
+                warnings.warn(
+                    f"Invalid keyword for column {idx + 1}: "
+                    "ASCII table null option (TNULLn) is not allowed for "
+                    "floating-point columns (TFORMn = Fw.d, Ew.d, or Dw.d) "
+                    f"(got {null!r}).  "
+                    "The invalid value will be used to identify null values "
+                    "in the data for backward compatibility.",
+                    VerifyWarning,
+                )
             # Special cases for recformat and dim
             # TODO: Try to eliminate the need for these special cases
             del valid_kwargs["recformat"]
