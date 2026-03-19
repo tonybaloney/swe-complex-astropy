@@ -296,6 +296,8 @@ def test_earth_barycentric_velocity_multi_d():
         [[-30.0], [30.0]] * u.km / u.s
     )
     assert quantity_allclose(ev.get_xyz(xyz_axis=-1), expected, atol=2.0 * u.km / u.s)
+    assert ep.shape == t.shape
+    assert ev.shape == t.shape
 
 
 @pytest.mark.remote_data
