@@ -330,7 +330,10 @@ class TestSetShape(ShapeSetup):
         t0_reshape_t = t0_reshape.T
         with pytest.raises(ValueError):
             t0_reshape_t.shape = (12,)  # Wrong number of elements.
-        with pytest.raises(AttributeError):
+        with pytest.raises((AttributeError, ValueError)):
+            # The exact exception type isn't really in our control,
+            # as it ultimately comes from numpy but depends on astropy's
+            # execution flow.
             t0_reshape_t.shape = (10, 5)  # Cannot be done without copy.
         # check no shape was changed.
         assert t0_reshape_t.shape == t0_reshape.T.shape
@@ -354,7 +357,7 @@ class TestSetShape(ShapeSetup):
         # But for reshape(50), location would need to be copied, so this
         # should fail.
         oldshape = self.t2.shape
-        with pytest.raises(AttributeError):
+        with pytest.raises((AttributeError, ValueError)):
             self.t2.shape = (50,)
         # check no shape was changed.
         assert self.t2.jd1.shape == oldshape
