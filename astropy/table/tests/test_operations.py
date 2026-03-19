@@ -1566,6 +1566,21 @@ class TestVStack:
             "               --   four",
         ]
 
+    def test_vstack_nonstringifiable_dtype(self):
+        dtype = type(
+            "CustomFloatDType",
+            (np.dtypes.Float64DType,),
+            {"__str__": lambda self: "CustomFloatDType()"},
+        )()
+        out = table.vstack(
+            [
+                Table([Column([1, 2], name="a", dtype=dtype)]),
+                Table([Column([3, 4], name="a", dtype=dtype)]),
+            ]
+        )
+        assert out["a"].dtype == dtype
+        assert np.all(out["a"] == [1, 2, 3, 4])
+
     def test_vstack_inputs_not_modified(self):
         """Tests that inputs are not modified, see issue #16119"""
         t1 = Table(data=dict(x=[1, 2, 3], y=["a", "b", "c"]))
