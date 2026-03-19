@@ -737,8 +737,11 @@ class BaseColumnInfo(DataInfo):
                 warn_str_func=warn_str_func,
             )
 
-        # Output dtype is the superset of all dtypes in in_cols
-        out["dtype"] = metadata.common_dtype(cols)
+        # Output dtype is the superset of all dtypes in in_cols. Preserve the
+        # dtype object itself when all inputs share the same one, since some
+        # third-party dtypes do not round-trip through np.dtype(str(dtype)).
+        dtypes = [col.info.dtype for col in cols]
+        out["dtype"] = dtypes[0] if all(dtype == dtypes[0] for dtype in dtypes[1:]) else metadata.common_dtype(cols)
 
         # Make sure all input shapes are the same
         uniq_shapes = {col.shape[1:] for col in cols}

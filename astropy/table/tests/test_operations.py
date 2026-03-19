@@ -1525,6 +1525,26 @@ class TestVStack:
         with pytest.raises(ValueError, match="coords are inconsistent"):
             table.vstack([t1, t2])
 
+    def test_vstack_same_unrecognized_dtype(self):
+        class UnrecognizedDType:
+            def __str__(self):
+                return "unrecognized-dtype"
+
+            def __eq__(self, other):
+                return isinstance(other, UnrecognizedDType)
+
+        class ArrayWithUnrecognizedDType(np.ndarray):
+            @property
+            def dtype(self):
+                return UnrecognizedDType()
+
+        col = Column(np.array([1, 2]).view(ArrayWithUnrecognizedDType), copy=False)
+        t = Table([col], names=["a"])
+
+        out = table.vstack([t, t])
+        assert np.all(out["a"] == [1, 2, 1, 2])
+        assert out["a"].info.dtype == col.info.dtype
+
     def test_vstack_structured_column(self):
         """Regression tests for gh-13271."""
         # Two tables with matching names, including a structured column.
