@@ -3780,6 +3780,26 @@ class TestColumnFunctions(FitsTestCase):
         for msg in err_msgs:
             assert msg in str(err.value)
 
+    def test_column_ascii_float_tnull_ignored(self):
+        coldefs = fits.ColDefs(
+            [
+                fits.Column(name="floatcol", format="F6.3", array=[1.234]),
+                fits.Column(name="strcol", format="A3", array=["abc"], null="---"),
+            ],
+            ascii=True,
+        )
+        hdu = fits.TableHDU.from_columns(coldefs)
+        hdu.header["TNULL1"] = "NaN"
+
+        with pytest.warns(
+            VerifyWarning,
+            match=r"Invalid keyword for column 1: Column null option \(TNULLn\) is invalid for ASCII table columns of type 'F6\.3'",
+        ):
+            columns = fits.ColDefs(hdu)
+
+        assert columns[0].null is None
+        assert columns[1].null == "---"
+
     def test_column_verify_start(self):
         """
         Regression test for https://github.com/astropy/astropy/pull/6359

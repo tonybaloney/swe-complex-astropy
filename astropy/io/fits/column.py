@@ -1064,12 +1064,20 @@ class Column(NotifierMixin):
         if null is not None and null != "":
             msg = None
             if isinstance(format, _AsciiColumnFormat):
-                null = str(null)
-                if len(null) > format.width:
+                if format.format == "A":
+                    null = str(null)
+                    if len(null) > format.width:
+                        msg = (
+                            "ASCII table null option (TNULLn) is longer than "
+                            "the column's character width and will be truncated "
+                            f"(got {null!r})."
+                        )
+                else:
                     msg = (
-                        "ASCII table null option (TNULLn) is longer than "
-                        "the column's character width and will be truncated "
-                        f"(got {null!r})."
+                        "Column null option (TNULLn) is invalid for ASCII table "
+                        f"columns of type {format!r} (got {null!r}).  "
+                        "The invalid value will be ignored for the purpose of "
+                        "formatting the data in this column."
                     )
             else:
                 tnull_formats = ("B", "I", "J", "K")
