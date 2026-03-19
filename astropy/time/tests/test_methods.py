@@ -320,11 +320,15 @@ class TestSetShape(ShapeSetup):
 
         t0_reshape = self.t0.copy()
         mjd = t0_reshape.mjd  # Creates a cache of the mjd attribute
+        t0_jd1 = t0_reshape._time.jd1
+        t0_jd2 = t0_reshape._time.jd2
         t0_reshape.shape = (5, 2, 5)
         assert t0_reshape.shape == (5, 2, 5)
         assert mjd.shape != t0_reshape.mjd.shape  # Cache got cleared
         assert np.all(t0_reshape.jd1 == self.t0._time.jd1.reshape(5, 2, 5))
         assert np.all(t0_reshape.jd2 == self.t0._time.jd2.reshape(5, 2, 5))
+        assert t0_reshape._time.jd1 is t0_jd1
+        assert t0_reshape._time.jd2 is t0_jd2
         assert t0_reshape.location is None
         # But if the shape doesn't work, one should get an error.
         t0_reshape_t = t0_reshape.T
@@ -345,11 +349,17 @@ class TestSetShape(ShapeSetup):
         # For reshape(5, 2, 5), the location array can remain the same.
         # Note that we need to work directly on self.t2 here, since any
         # copy would cause location to have the full shape.
+        t2_jd1 = self.t2._time.jd1
+        t2_jd2 = self.t2._time.jd2
+        t2_location = self.t2.location
         self.t2.shape = (5, 2, 5)
         assert self.t2.shape == (5, 2, 5)
         assert self.t2.jd1.shape == (5, 2, 5)
         assert self.t2.jd2.shape == (5, 2, 5)
         assert self.t2.location.shape == (5, 2, 5)
+        assert self.t2._time.jd1 is t2_jd1
+        assert self.t2._time.jd2 is t2_jd2
+        assert self.t2.location is t2_location
         assert self.t2.location.strides == (0, 0, 24)
         # But for reshape(50), location would need to be copied, so this
         # should fail.
