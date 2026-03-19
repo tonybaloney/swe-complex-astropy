@@ -384,11 +384,14 @@ def to_pandas(
 
     # Encode mixins and validate columns
     tbl = _encode_mixins(table)
-    _validate_columns_for_backend(tbl, backend_impl=PANDAS_LIKE)  # pandas validation
 
     out = {}
 
     for name, column in tbl.columns.items():
+        if len(column.shape) > 1:
+            out[name] = np.empty(len(column), dtype=object)
+            out[name][:] = [value for value in column]
+            continue
         if getattr(column.dtype, "isnative", True):
             out[name] = column
         else:
