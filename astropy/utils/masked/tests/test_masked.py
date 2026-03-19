@@ -562,6 +562,7 @@ class TestMaskedArrayShaping(MaskedArraySetup):
         assert_array_equal(ma_reshape.unmasked, expected_data)
         assert_array_equal(ma_reshape.mask, expected_mask)
 
+    @pytest.mark.filterwarnings("error:.*shape attribute.*:DeprecationWarning")
     def test_shape_setting(self):
         ma_reshape = self.ma.copy()
         ma_reshape.shape = (6,)
