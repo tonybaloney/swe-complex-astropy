@@ -6,7 +6,7 @@ import xmlrpc.client as xmlrpc
 
 from .errors import SAMPHubError
 from .lockfile_helpers import get_main_running_hub
-from .utils import ServerProxyPool
+from .utils import SAFE_XMLRPC_SERVERPROXY, ServerProxyPool
 
 __all__ = ["SAMPHubProxy"]
 
@@ -65,7 +65,7 @@ class SAMPHubProxy:
             url = hub_params["samp.hub.xmlrpc.url"].replace("\\", "")
 
             self.proxy = ServerProxyPool(
-                pool_size, xmlrpc.ServerProxy, url, allow_none=1
+                pool_size, SAFE_XMLRPC_SERVERPROXY, url, allow_none=1
             )
 
             self.ping()

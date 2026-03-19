@@ -2,12 +2,12 @@
 
 import pytest
 
-# By default, tests should not use the internet.
 from astropy.samp import SAMPWarning, conf
 from astropy.samp.client import SAMPClient
 from astropy.samp.hub import SAMPHubServer
 from astropy.samp.hub_proxy import SAMPHubProxy
 from astropy.samp.integrated_client import SAMPIntegratedClient
+from astropy.samp.utils import SAFE_XMLRPC_SERVERPROXY
 
 
 def setup_module(module):
@@ -17,6 +17,11 @@ def setup_module(module):
 def test_SAMPHubProxy():
     """Test that SAMPHubProxy can be instantiated"""
     SAMPHubProxy()
+
+
+def test_safe_xmlrpc_server_proxy():
+    assert SAFE_XMLRPC_SERVERPROXY is not None
+    assert SAFE_XMLRPC_SERVERPROXY.__module__.startswith("defusedxml")
 
 
 @pytest.mark.slow

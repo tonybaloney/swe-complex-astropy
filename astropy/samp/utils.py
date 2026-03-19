@@ -10,6 +10,8 @@ import xmlrpc.client as xmlrpc
 from io import StringIO
 from urllib.request import urlopen
 
+from defusedxml import xmlrpc as defused_xmlrpc
+
 from .constants import SAMP_STATUS_ERROR
 from .errors import SAMPProxyError
 
@@ -28,7 +30,9 @@ def internet_on():
             return True
 
 
-__all__ = ["SAMPMsgReplierWrapper"]
+__all__ = ["SAFE_XMLRPC_SERVERPROXY", "SAMPMsgReplierWrapper"]
+
+SAFE_XMLRPC_SERVERPROXY = defused_xmlrpc.xmlrpc_client.ServerProxy
 
 __doctest_skip__ = ["."]
 
