@@ -1141,3 +1141,87 @@ def test_zero_length_string():
         "          12",
     ]
     assert t.pformat(show_dtype=True) == exp
+
+
+def test_max_print_vector():
+    """Test the max_print_vector configuration for multi-dimensional columns."""
+    t = Table()
+    t["a"] = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)
+
+    # Default (max_print_vector=2): only first and last shown for 3-vectors
+    lines = t.pformat(show_dtype=True)
+    assert lines == [
+        "   a    ",
+        "int64[3]",
+        "--------",
+        "  1 .. 3",
+        "  4 .. 6",
+    ]
+
+    # With max_print_vector=3: all 3 elements shown
+    with table.conf.set_temp("max_print_vector", 3):
+        lines = t.pformat(show_dtype=True)
+        assert lines == [
+            "     a     ",
+            "  int64[3] ",
+            "-----------",
+            "1 .. 2 .. 3",
+            "4 .. 5 .. 6",
+        ]
+
+    # With max_print_vector=10: all elements shown for smaller vectors
+    with table.conf.set_temp("max_print_vector", 10):
+        lines = t.pformat(show_dtype=True)
+        assert lines == [
+            "     a     ",
+            "  int64[3] ",
+            "-----------",
+            "1 .. 2 .. 3",
+            "4 .. 5 .. 6",
+        ]
+
+
+def test_max_print_vector_2d():
+    """Test max_print_vector with 2-d vector columns."""
+    t = Table()
+    t["a"] = np.arange(12, dtype=np.int64).reshape(3, 2, 2)
+
+    # Default: only first and last
+    lines = t.pformat(show_dtype=True)
+    assert lines == [
+        "    a     ",
+        "int64[2,2]",
+        "----------",
+        "    0 .. 3",
+        "    4 .. 7",
+        "   8 .. 11",
+    ]
+
+    # With threshold high enough to show all 4 elements
+    with table.conf.set_temp("max_print_vector", 4):
+        lines = t.pformat(show_dtype=True)
+        assert lines == [
+            "        a         ",
+            "    int64[2,2]    ",
+            "------------------",
+            "  0 .. 1 .. 2 .. 3",
+            "  4 .. 5 .. 6 .. 7",
+            "8 .. 9 .. 10 .. 11",
+        ]
+
+
+def test_max_print_vector_default_backward_compat():
+    """Test that default max_print_vector=2 preserves existing behavior."""
+    arr = [
+        np.array([[1, 2], [10, 20]], dtype=np.int64),
+        np.array([[3, 4], [30, 40]], dtype=np.int64),
+    ]
+    t = Table(arr)
+    lines = t.pformat(show_dtype=True)
+    assert lines == [
+        "  col0     col1  ",
+        "int64[2] int64[2]",
+        "-------- --------",
+        "  1 .. 2   3 .. 4",
+        "10 .. 20 30 .. 40",
+    ]

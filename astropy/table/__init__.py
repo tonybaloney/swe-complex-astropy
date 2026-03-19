@@ -76,6 +76,15 @@ class Conf(_config.ConfigNamespace):
         "This configuration option will be deprecated and then removed in "
         "subsequent major releases.",
     )
+    max_print_vector = _config.ConfigItem(
+        2,
+        "Maximum number of vector elements to display in each row of a "
+        "multi-dimensional column. If a column cell has more elements than "
+        "this, only the first and last elements are shown with ' .. ' in "
+        "between. Set to a larger value (e.g., 10) to see more elements of "
+        "vector columns like 3-vectors.",
+        cfgtype="integer",
+    )
 
 
 conf = Conf()

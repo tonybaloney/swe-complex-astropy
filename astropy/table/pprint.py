@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 import fnmatch
+import itertools
 import os
 import re
 import sys
@@ -429,8 +430,17 @@ class TableFormatter:
         if multidims:
             multidim0 = tuple(0 for n in multidims)
             multidim1 = tuple(n - 1 for n in multidims)
-            multidims_all_ones = np.prod(multidims) == 1
+            n_multidim_elements = np.prod(multidims)
+            multidims_all_ones = n_multidim_elements == 1
             multidims_has_zero = 0 in multidims
+            from . import conf as table_conf
+
+            if n_multidim_elements <= table_conf.max_print_vector:
+                multidim_indices = list(
+                    itertools.product(*(range(n) for n in multidims))
+                )
+            else:
+                multidim_indices = [multidim0, multidim1]
 
         i_dashes = None
         i_centers = []  # Line indexes where content should be centered
@@ -528,9 +538,10 @@ class TableFormatter:
                     # Any zero dimension means there is no data to print
                     return ""
                 else:
-                    left = format_func(col_format, col[(idx,) + multidim0])
-                    right = format_func(col_format, col[(idx,) + multidim1])
-                    return f"{left} .. {right}"
+                    return " .. ".join(
+                        format_func(col_format, col[(idx,) + mi])
+                        for mi in multidim_indices
+                    )
             elif is_scalar:
                 return format_func(col_format, col)
             else:
