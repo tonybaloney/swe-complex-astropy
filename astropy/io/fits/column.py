@@ -1610,6 +1610,24 @@ class ColDefs(NotifierMixin):
                 warnings.warn(
                     f"Invalid keyword for column {idx + 1}: {val[1]}", VerifyWarning
                 )
+            # Per the FITS standard (section 7.3.2), TNULL is only valid
+            # for integer columns in ASCII tables.  Warn if TNULL is set
+            # on a floating-point column, but keep the value so that
+            # non-standard files can still be read.
+            fmt = valid_kwargs.get("format")
+            if (
+                valid_kwargs.get("null")
+                and isinstance(fmt, _AsciiColumnFormat)
+                and fmt.format in ("F", "E", "D")
+            ):
+                warnings.warn(
+                    f"Column null option (TNULLn) is not valid per the FITS "
+                    f"standard for ASCII table columns of type {fmt!r} "
+                    f"(got {valid_kwargs['null']!r}).  The data will still be "
+                    f"read correctly but the TNULLn keyword should be removed "
+                    f"or the column format changed to an integer type.",
+                    VerifyWarning,
+                )
             # Special cases for recformat and dim
             # TODO: Try to eliminate the need for these special cases
             del valid_kwargs["recformat"]

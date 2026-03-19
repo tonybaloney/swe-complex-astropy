@@ -878,11 +878,15 @@ class FITS_rec(np.recarray):
         # array buffer.
         dummy = np.char.ljust(field, format.width)
         dummy = np.char.replace(dummy, encode_ascii("D"), encode_ascii("E"))
-        null_fill = encode_ascii(str(ASCIITNULL).rjust(format.width))
 
-        # Convert all fields equal to the TNULL value (nullval) to empty fields.
-        # TODO: These fields really should be converted to NaN or something else undefined.
-        # Currently they are converted to empty fields, which are then set to zero.
+        # For floating-point columns, use NaN as the fill value for
+        # null/empty fields so they are not silently converted to zero.
+        if format.format in ("F", "E", "D"):
+            null_fill = encode_ascii("NaN".rjust(format.width))
+        else:
+            null_fill = encode_ascii(str(ASCIITNULL).rjust(format.width))
+
+        # Convert all fields equal to the TNULL value (nullval) to the fill value.
         dummy = np.where(np.char.strip(dummy) == nullval, null_fill, dummy)
 
         # always replace empty fields, see https://github.com/astropy/astropy/pull/5394

@@ -759,6 +759,7 @@ class TestHDUListFunctions(FitsTestCase):
             assert (hdul[1].data == data2).all()
             assert (hdul[2].data == data2).all()
 
+    @pytest.mark.filterwarnings("ignore:Column null option.*is not valid:astropy.io.fits.verify.VerifyWarning")
     def test_hdul_fromstring(self):
         """
         Test creating the HDUList structure in memory from a string containing
@@ -785,7 +786,9 @@ class TestHDUListFunctions(FitsTestCase):
                         for n in hdul[idx].data.names:
                             c1 = hdul[idx].data[n]
                             c2 = hdul2[idx].data[n]
-                            assert (c1 == c2).all()
+                            # Use equal_nan for float columns to handle NaN values
+                            is_float = np.issubdtype(c1.dtype, np.floating)
+                            assert np.array_equal(c1, c2, equal_nan=is_float) if is_float else (c1 == c2).all()
                     elif any(dim == 0 for dim in hdul[idx].data.shape) or any(
                         dim == 0 for dim in hdul2[idx].data.shape
                     ):
