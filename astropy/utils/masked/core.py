@@ -489,11 +489,36 @@ class MaskedNDArrayInfo(MaskedInfoBase, ParentDtypeInfo):
         return self._parent_cls.from_unmasked(**map)
 
 
+def _reconstruct_masked_info(data_cls, attrs):
+    """Reconstruct a dynamically created MaskedArraySubclassInfo for pickling.
+
+    Parameters
+    ----------
+    data_cls : type
+        The unmasked data class (e.g., `~astropy.units.Quantity`).
+    attrs : dict
+        The info ``_attrs`` dict to restore.
+    """
+    from astropy.utils.masked import Masked
+
+    masked_cls = Masked._get_masked_cls(data_cls)
+    info_cls = type(masked_cls.__dict__["info"])
+    info = info_cls(bound=True)
+    info._attrs.update(attrs)
+    return info
+
+
 class MaskedArraySubclassInfo(MaskedInfoBase):
     """Mixin class to create a subclasses such as MaskedQuantityInfo."""
 
     # This is used below in __init_subclass__, which also inserts a
     # 'serialize_method' attribute in attr_names.
+
+    def __reduce__(self):
+        # The info class is dynamically created (e.g., MaskedQuantityInfo)
+        # and not importable by module path, so provide custom pickling.
+        # _data_cls is set as a class attribute in __init_subclass__.
+        return (_reconstruct_masked_info, (type(self)._data_cls, dict(self._attrs)))
 
     def _represent_as_dict(self):
         # Use the data_cls as the class name for serialization,
@@ -620,7 +645,7 @@ class MaskedNDArray(Masked, np.ndarray, base_cls=np.ndarray, data_cls=np.ndarray
             new_info = type(
                 cls.__name__ + "Info",
                 (MaskedArraySubclassInfo, data_info.__class__),
-                dict(attr_names=attr_names),
+                dict(attr_names=attr_names, _data_cls=cls._data_cls),
             )
             cls.info = new_info()
 

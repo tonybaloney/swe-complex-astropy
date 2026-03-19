@@ -7,6 +7,7 @@ from astropy.table import Column, MaskedColumn, QTable, Table
 from astropy.table.table_helpers import simple_table
 from astropy.time import Time
 from astropy.units import Quantity, deg
+from astropy.utils.masked import Masked
 
 
 def test_pickle_column(protocol):
@@ -139,6 +140,45 @@ def test_pickle_masked_table(protocol):
     assert tp["a"].attrs_equal(t["a"])
     assert tp["b"].attrs_equal(t["b"])
     assert tp.meta == t.meta
+
+
+def test_pickle_masked_qtable(protocol):
+    """Regression test for https://github.com/astropy/astropy/issues/19142
+
+    Pickling a QTable with masked Quantity columns should work.
+    """
+    t = QTable(
+        {
+            "a": Masked(np.arange(3) * Quantity(1, "m"), mask=[True, False, False]),
+            "b": Masked(np.arange(3) * Quantity(1, "s"), mask=[False, True, False]),
+            "c": np.arange(3) * Quantity(1, "kg"),
+        }
+    )
+
+    tp = pickle.loads(pickle.dumps(t))
+
+    assert tp.__class__ is QTable
+    assert np.all(tp["a"].unmasked == t["a"].unmasked)
+    assert np.all(tp["a"].mask == t["a"].mask)
+    assert np.all(tp["b"].unmasked == t["b"].unmasked)
+    assert np.all(tp["b"].mask == t["b"].mask)
+    assert np.all(tp["c"] == t["c"])
+    assert type(tp["a"]) is type(t["a"])
+    assert type(tp["b"]) is type(t["b"])
+    assert type(tp["c"]) is type(t["c"])
+    assert tp["a"].info.name == "a"
+    assert tp["b"].info.name == "b"
+
+
+def test_pickle_masked_quantity_column(protocol):
+    """Test that a standalone MaskedQuantity with info accessed can be pickled."""
+    col = Masked(np.arange(5) * Quantity(1, "m"), mask=[True, False, True, False, False])
+    _ = col.info  # Force info creation in __dict__
+    col2 = pickle.loads(pickle.dumps(col))
+
+    assert np.all(col.unmasked == col2.unmasked)
+    assert np.all(col.mask == col2.mask)
+    assert type(col) is type(col2)
 
 
 def test_pickle_indexed_table(protocol):
